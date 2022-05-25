@@ -10,19 +10,25 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Load Libraries
-We will use the librarires rtweet and tidyverse
+
+We will use the librarires rtweet and tidyverse.
 
 ```{r message=FALSE}
 library(rtweet, quietly = TRUE)
 library(tidyverse, quietly = TRUE)
 ```
 
-## Including Plots
+## Load credentials
 
-You can also embed plots, for example:
+Load credentials for twitter API.
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+authentication <- readRDS("data/twitter_api_keys.rds")
+twitter_token <- create_token(app = "ESG-Academic",
+                              consumer_key = authentication$consumer_key,
+                              consumer_secret = authentication$consumer_secret)
+
+
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
