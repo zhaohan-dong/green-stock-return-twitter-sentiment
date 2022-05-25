@@ -33,10 +33,30 @@ lookup_statuses(tweet_list)
 
 ## Load target tweet IDs
 
+Load the tweet_id from the csv file and store as strings.
+
 ```{r}
 tweet_id <- read_csv("data/1_Tweet_IDs.csv", col_types = "c")
-tweet_list <- unlist(tweet_id[14353860,])
-lookup_statuses(tweet_list)
 ```
 
-## 
+## Define twitter look up function
+
+```{r}
+batch_lookup <- function(tweet_list) {
+  # The lookup_statuses function only takes vectors, not strings
+  lookup_statuses(unlist(tweet_list))
+}
+```
+
+## Loop through the tweet IDs
+
+```{r}
+i <- 1
+tweet_collection <- tibble()
+while (i < 14353859) {
+  tweet_collection %>%
+    rbind(batch_lookup(tweet_id[i:(i + 89999),]))
+  Sys.sleep(900)
+  i <- i+90000
+}
+```
