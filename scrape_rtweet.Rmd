@@ -1,0 +1,28 @@
+---
+title: "Scrape with rtweet"
+author: "Zhaohan Dong"
+date: '2022-05-25'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+We will use the librarires rtweet and tidyverse
+
+```{r message=FALSE}
+library(rtweet, quietly = TRUE)
+library(tidyverse, quietly = TRUE)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
