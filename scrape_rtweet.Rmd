@@ -28,7 +28,15 @@ twitter_token <- create_token(app = "ESG-Academic",
                               consumer_key = authentication$consumer_key,
                               consumer_secret = authentication$consumer_secret)
 
-
+lookup_statuses(tweet_list)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Load target tweet IDs
+
+```{r}
+tweet_id <- read_csv("data/1_Tweet_IDs.csv", col_types = "c")
+tweet_list <- unlist(tweet_id[14353860,])
+lookup_statuses(tweet_list)
+```
+
+## 
