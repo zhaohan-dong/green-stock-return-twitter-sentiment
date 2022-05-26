@@ -59,15 +59,14 @@ while (i < 14353859) {
   ptm <- proc.time()
   print(paste("Processing", i, "to", i + 89999, "tweet ID"))
   result <- batch_lookup(tweet_id[i:(i + 89999),])
+  print(proc.time() - ptm)
   filename <- paste("tweet_", i, ".csv", sep = "")
   save_as_csv(result, filename)
   print("CSV saved.")
-  tweet_collection <- tweet_collection %>%
-    rbind(result)
   i <- i+90000
   print(paste(i, "tweet ID processed"))
   # Stop process timing
   print(proc.time() - ptm)
-  Sys.sleep(480)
+  Sys.sleep(500)
 }
 ```
