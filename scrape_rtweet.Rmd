@@ -57,8 +57,13 @@ if (!exists("tweet_collection")) {
 while (i < 14353859) {
   # Start process timing
   ptm <- proc.time()
+  
+  # Start querying data
   print(paste("Processing", i, "to", i + 89999, "tweet ID"))
   result <- batch_lookup(tweet_id[i:(i + 89999),])
+  print(paste("Query time", proc.time() - ptm))
+  
+  # Saving data to csv
   filename <- paste("tweet_", i, ".csv", sep = "")
   save_as_csv(result, filename)
   print("CSV saved.")
@@ -67,7 +72,7 @@ while (i < 14353859) {
   i <- i+90000
   print(paste(i, "tweet ID processed"))
   # Stop process timing
-  print(proc.time() - ptm)
-  Sys.sleep(480)
+  print(paste("Total batch time", proc.time() - ptm))
+  Sys.sleep(500)
 }
 ```
