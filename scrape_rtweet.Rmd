@@ -27,8 +27,6 @@ authentication <- readRDS("data/twitter_api_keys.rds")
 twitter_token <- create_token(app = "ESG-Academic",
                               consumer_key = authentication$consumer_key,
                               consumer_secret = authentication$consumer_secret)
-
-lookup_statuses(tweet_list)
 ```
 
 ## Load target tweet IDs
@@ -60,8 +58,12 @@ while (i < 14353859) {
   # Start process timing
   ptm <- proc.time()
   print(paste("Processing", i, "to", i + 89999, "tweet ID"))
+  result <- batch_lookup(tweet_id[i:(i + 89999),])
+  filename <- paste("tweet_", i, ".csv", sep = "")
+  save_as_csv(result, filename)
+  print("CSV saved.")
   tweet_collection <- tweet_collection %>%
-    rbind(batch_lookup(tweet_id[i:(i + 89999),]))
+    rbind(result)
   i <- i+90000
   print(paste(i, "tweet ID processed"))
   # Stop process timing
