@@ -52,11 +52,17 @@ batch_lookup <- function(tweet_list) {
 
 ```{r}
 i <- 1
-tweet_collection <- tibble()
+if (!exists("tweet_collection")) {
+  tweet_collection <- tibble()
+}
+
 while (i < 14353859) {
-  tweet_collection %>%
+  ptm <- proc.time()
+  print(paste("Processing", i, "to", i + 89999, "tweet ID"))
+  tweet_collection <- tweet_collection %>%
     rbind(batch_lookup(tweet_id[i:(i + 89999),]))
-  Sys.sleep(900)
   i <- i+90000
+  print(paste(i, "tweet ID processed"))
+  proc.time() - ptm
 }
 ```
