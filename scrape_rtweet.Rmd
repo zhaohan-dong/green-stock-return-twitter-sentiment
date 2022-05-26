@@ -67,6 +67,7 @@ while (i < 14353859) {
   i <- i+90000
   print(paste(i, "tweet ID processed"))
   # Stop process timing
-  proc.time() - ptm
+  print(proc.time() - ptm)
+  Sys.sleep(480)
 }
 ```
