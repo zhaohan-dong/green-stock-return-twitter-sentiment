@@ -49,6 +49,8 @@ batch_lookup <- function(tweet_list) {
 ## Loop through the tweet IDs
 
 ```{r}
+setwd("data")
+
 i <- 1
 if (!exists("tweet_collection")) {
   tweet_collection <- tibble()
