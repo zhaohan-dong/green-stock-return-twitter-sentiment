@@ -11,7 +11,7 @@ tweet_df <- read_twitter_csv("data/tweet.csv")
 
 # View(head(tweet_df))
 
-# Select only columns that might be used
+# Select only columns that might be used and filter by the keywords in text/quoted_text
 tweet_df <- tweet_df %>%
   select(c("user_id",
            "status_id",
@@ -24,4 +24,9 @@ tweet_df <- tweet_df %>%
            "quoted_status_id",
            "quoted_text",
            "quoted_created_at",
-           "quoted_user_id"))
+           "quoted_user_id")) %>%
+  filter((grepl("climate change|#climatechange|global warming|#globalwarming", text, ignore.case = TRUE) |
+           grepl("climate change|#climatechange|global warming|#globalwarming", text, ignore.case = TRUE)))
+
+
+
