@@ -6,9 +6,9 @@ require("zoo", quietly = TRUE)
 require("lubridate", quietly = TRUE)
 
 # Load original data from NOAA
-# Select fields DATE, NAME, TAVG (monthly average temperature), TMAX, TMIN
+# Select fields DATE, NAME, TAVG (monthly average temperature) (TMAX and TMIN also available)
 nyc_wx <- read.csv("data/KNYC_monthly_summary.csv") %>%
-  select(DATE, NAME, TAVG, TMAX, TMIN)
+  select(DATE, TAVG)
 
 # Convert DATE field from string to date class with zoo package
 nyc_wx$DATE <- as.Date(as.yearmon(nyc_wx$DATE))
@@ -17,26 +17,26 @@ nyc_wx$DATE <- as.Date(as.yearmon(nyc_wx$DATE))
 nyc_wx <- nyc_wx %>%
   filter(DATE >= "1997-01-01" & DATE < "2019-01-01")
 
-# Define query filter for the prev_year_average function
-query_date_filter <- function(date, prior_month = 120) {
-  filtered_df <- nyc_wx %>%
-    filter(DATE >= date - months(prior_month) &
-             DATE < current_month)
-  return(filtered_df)
-}
+nyc_wx <- nyc_wx %>%
+  # Calculate temperature average of previous 120 months
+  mutate(prev_yrs_tavg = rollmeanr(TAVG, 120, na.pad = TRUE, align = "right"),
+         # List lagged monthly average temperatures
+         lag12 = lag(TAVG, n = 12L, order_by = DATE),
+         lag24 = lag(TAVG, n = 24L, order_by = DATE),
+         lag36 = lag(TAVG, n = 36L, order_by = DATE),
+         lag48 = lag(TAVG, n = 48L, order_by = DATE),
+         lag60 = lag(TAVG, n = 60L, order_by = DATE),
+         lag72 = lag(TAVG, n = 72L, order_by = DATE),
+         lag84 = lag(TAVG, n = 84L, order_by = DATE),
+         lag96 = lag(TAVG, n = 96L, order_by = DATE),
+         lag108 = lag(TAVG, n = 108L, order_by = DATE),
+         lag120 = lag(TAVG, n = 120L, order_by = DATE)
+         ) %>%
+  # Calculate temperature average of the same month in past 10 years
+  mutate(monthly_lagged_tavg_deviation = (lag12 + lag24 + lag36 + lag48 + lag60 +
+                                lag72 + lag84 + lag96 + lag108 + lag120) / 12 - prev_yrs_tavg) %>%
+  select(DATE, TAVG, prev_yrs_tavg, monthly_lagged_tavg_deviation) %>%
+  # Calculate abnormal temperature
+  mutate(ab_temp = TAVG - prev_yrs_tavg - monthly_lagged_tavg_deviation)
 
-
-prev_year_avg <- function(data_col) {
-  # Handle months before 2007-01, return NA_Date_
-  ifelse(data_col < "2007-01-01",
-         # return NA_Date_ if month is before 2007-01
-         return(NA),
-         
-         # else
-         return(avg(query_date_filter(data_col, 120)$data_col))
-         )
-}
-
-nyc_wx$PREV_YRS_TAVG <- prev_year_avg(nyc_wx$DATE)
-
-nyc_wx$DATE < "2007-01-01"
+write.csv(nyc_wx, "data/KNYC_monthly_summary_processed.csv")
