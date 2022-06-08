@@ -23,12 +23,10 @@ prev_year_average <- function(current_month) {
     return(NA_Date_)
   } else {
     query_wx <- nyc_wx %>%
-      filter(DATE >= current_month - month(120) &
+      filter(DATE >= current_month - months(120) &
                DATE < current_month)
     return(avg(query_wx$TAVG))
   }
 }
 
-prev_year_average("2018-01")
-
-nyc_wx$PREV_YRS_TAVG <- nyc_wx
+nyc_wx$PREV_YRS_TAVG <- prev_year_average(nyc_wx$DATE)
