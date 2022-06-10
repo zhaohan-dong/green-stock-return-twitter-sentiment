@@ -84,7 +84,7 @@ fitted_model <- price %>%
   group_by(ticker, yr_mon) %>%
   do(model = lm(R_excess ~ MKT_RF + SMB + HML, data = ., na.action = na.omit))
 
-test <- lm_table(price %>% filter(!is.na(monthly_raw_return)), R_excess ~ MKT_RF + SMB + HML, .groups = c("ticker", "yr_mon"))
+# test <- lm_table(price %>% filter(!is.na(monthly_raw_return)), R_excess ~ MKT_RF + SMB + HML, .groups = c("ticker", "yr_mon"))
 
 fitted_model <- fitted_model %>%
   left_join(y = price[!duplicated(price[ ,c("yr_mon", "ticker", "monthly_raw_return")]), ] %>%
