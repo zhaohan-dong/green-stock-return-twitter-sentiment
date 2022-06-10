@@ -35,7 +35,8 @@ price <- rbind(clean_stock, oil_gas_stock, utility_stock) %>%
   mutate(lag1 = lag(value, n = 1L, order_by = date)) %>%
   mutate(daily_raw_return = (value - lag1) / lag1) %>%
   select(!c(data_field, lag1)) %>%
-  ungroup()
+  ungroup() %>%
+  rename(price = value)
 
 # Calculate monthly raw return
 
@@ -51,8 +52,8 @@ price <- price %>%
   
   # Regroup by ticker and calculate monthly raw return
   group_by(ticker) %>%
-  mutate(lag1 = lag(value)) %>%
-  mutate(monthly_raw_return = (value - lag1) / lag1) %>%
+  mutate(lag1 = lag(price)) %>%
+  mutate(monthly_raw_return = (price - lag1) / lag1) %>%
   select(c(ticker, yr_mon, monthly_raw_return)) %>%
   ungroup() %>%
   
