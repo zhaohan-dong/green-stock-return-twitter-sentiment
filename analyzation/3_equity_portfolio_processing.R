@@ -89,5 +89,3 @@ fitted_model <- price %>%
 fitted_model <- fitted_model %>%
   left_join(y = price[!duplicated(price[ ,c("yr_mon", "ticker", "monthly_raw_return")]), ] %>%
               select(yr_mon, ticker, monthly_raw_return, category))
-
-fitted_model %>% summarize(tidy(model), .groups = "keep")
