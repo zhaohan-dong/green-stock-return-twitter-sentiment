@@ -86,4 +86,4 @@ fitted_model <- price %>%
 
 test <- lm_table(price %>% filter(!is.na(monthly_raw_return)), R_excess ~ MKT_RF + SMB + HML, .groups = c("ticker", "yr_mon"))
 
-fitted_model %>% tidy(model)
+fitted_model %>% summarize(tidy(model))
