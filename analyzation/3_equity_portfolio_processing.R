@@ -3,7 +3,6 @@
 ## risk-adjusted return using fama-french three factor model
 
 require("tidyverse", quietly = TRUE)
-require("xts", quietly = TRUE)
 
 # Define function to cleanse data
 cleanse_stock_data <- function(df) {
@@ -39,14 +38,25 @@ price <- rbind(clean_stock, oil_gas_stock, utility_stock) %>%
   ungroup()
 
 # Calculate monthly raw return
-price$mon_yr <- format(price$date, "%Y-%m")
 
-price_temp <- price %>%
-  group_by(ticker, mon_yr) %>%
+# Create groups by month using yr_mon column
+price$yr_mon <- format(price$date, "%Y-%m")
+
+price <- price %>%
+  group_by(ticker, yr_mon) %>%
+  
+  # Select last day of month in the data
   filter(date == max(date)) %>%
   ungroup() %>%
+  
+  # Regroup by ticker and calculate monthly raw return
   group_by(ticker) %>%
   mutate(lag1 = lag(value)) %>%
   mutate(monthly_raw_return = (value - lag1) / lag1) %>%
-  select(c(mon_yr, monthly_raw_return)) %>%
-  ungroup()
+  select(c(ticker, yr_mon, monthly_raw_return)) %>%
+  ungroup() %>%
+  
+  # Merge resulting data with original dataframe
+  right_join(y = price) %>%
+  # Delete yr_mon column
+  select(!yr_mon)
