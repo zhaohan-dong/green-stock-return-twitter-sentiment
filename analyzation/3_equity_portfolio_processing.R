@@ -60,3 +60,4 @@ price <- price %>%
   right_join(y = price) %>%
   # Delete yr_mon column
   select(!yr_mon)
+
