@@ -2,7 +2,14 @@
 ## Then we will calculate raw daily & monthly return and
 ## risk-adjusted return using fama-french three factor model
 
-require("tidyverse", quietly = TRUE)
+library(tidyquant)
+library(tidyverse)
+library(timetk)
+library(broom)
+library(glue)
+
+require(tidyverse, quietly = TRUE)
+require(broom, quietly = TRUE)
 
 # Define function to cleanse data
 cleanse_stock_data <- function(df) {
@@ -58,11 +65,25 @@ price <- price %>%
   ungroup() %>%
   
   # Merge resulting data with original dataframe
-  right_join(y = price) %>%
-  # Delete yr_mon column
-  select(!yr_mon)
+  right_join(y = price)
 
 
 # Load Fama-French three-factor model data
 ff_model_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.csv") %>%
   mutate(date = as.Date(as.character(date), "%Y%m%d"))
+
+# Combine ff model data from percentage, left join to include only market open days
+price <- left_join(price, ff_model_data) %>%
+  rename(MKT_RF = `Mkt-RF`) %>%
+  mutate(monthly_raw_return = monthly_raw_return * 100,
+         daily_raw_return = daily_raw_return * 100,
+         R_excess = daily_raw_return - RF)
+
+fitted_model <- price %>%
+  filter(!is.na(monthly_raw_return)) %>%
+  group_by(ticker, yr_mon) %>%
+  do(model = lm(R_excess ~ MKT_RF + SMB + HML, data = ., na.action = na.omit))
+
+test <- lm_table(price %>% filter(!is.na(monthly_raw_return)), R_excess ~ MKT_RF + SMB + HML, .groups = c("ticker", "yr_mon"))
+
+fitted_model %>% tidy(model)
