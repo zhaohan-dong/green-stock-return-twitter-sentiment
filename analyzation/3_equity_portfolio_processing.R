@@ -62,3 +62,7 @@ price <- price %>%
   # Delete yr_mon column
   select(!yr_mon)
 
+
+# Load Fama-French three-factor model data
+ff_model_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.csv") %>%
+  mutate(date = as.Date(as.character(date), "%Y%m%d"))
