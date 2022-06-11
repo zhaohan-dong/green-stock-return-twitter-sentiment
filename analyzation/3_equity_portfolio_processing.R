@@ -51,6 +51,26 @@ daily_raw_return <- function(portfolio_df) {
   return(result_df)
 }
 
+# Calculate monthly raw return
+monthly_raw_return <- function(portfolio_df) {
+  price %>%
+    group_by(ticker, yr_mon) %>%
+    
+    # Select last day of month in the data
+    filter(date == max(date)) %>%
+    ungroup() %>%
+    
+    # Regroup by ticker and calculate monthly raw return
+    group_by(ticker) %>%
+    mutate(lag1 = lag(price)) %>%
+    mutate(monthly_raw_return = (price - lag1) / lag1) %>%
+    select(c(ticker, yr_mon, monthly_raw_return)) %>%
+    ungroup() %>%
+    
+    # Merge resulting data with original dataframe
+    right_join(y = price)
+}
+
 # Combine fama-french three-factor and portfolio df with daily return
 # and calculate daily excess return + add year-month grouping helper column
 combine_ff_model <- function(portfolio_df) {
@@ -79,7 +99,7 @@ fit_lm_model <- function(portfolio_df) {
 }
 
 
-##########################################################################
+############################################################################
 ## Beginning of task
 # Read stock data
 clean_stock <- read_csv("data/equity/clean_selected.csv") %>%
@@ -116,25 +136,11 @@ utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
 
 # Fit fama-french model to the portfolios
 clean_stock_equal_weight_model <- fit_lm_model(clean_stock_equal_weight)
+oil_gas_stock_equal_weight_model <- fit_lm_model(oil_gas_stock_equal_weight)
+utility_stock_equal_weight_model <- fit_lm_model(utility_stock_equal_weight)
 
-##################################################################################
-## Calculate monthly raw return
-price <- price %>%
-  group_by(ticker, yr_mon) %>%
-  
-  # Select last day of month in the data
-  filter(date == max(date)) %>%
-  ungroup() %>%
-  
-  # Regroup by ticker and calculate monthly raw return
-  group_by(ticker) %>%
-  mutate(lag1 = lag(price)) %>%
-  mutate(monthly_raw_return = (price - lag1) / lag1) %>%
-  select(c(ticker, yr_mon, monthly_raw_return)) %>%
-  ungroup() %>%
-  
-  # Merge resulting data with original dataframe
-  right_join(y = price)
+###############################################################################
+
 
 
 
