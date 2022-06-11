@@ -104,10 +104,6 @@ clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
 oil_gas_stock_equal_weight <- combine_ff_model(oil_gas_stock_equal_weight)
 utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 523838428533928d07b954df3b732bd927a438ad
 # Model fitting for multiple groups
 # Solution on: https://stackoverflow.com/questions/22713325/fitting-several-regression-models-with-dplyr
 fitted_model <- clean_stock_equal_weight %>%
