@@ -67,9 +67,19 @@ combine_ff_model <- function(portfolio_df) {
   return(result_df)
 }
 
+# Model fitting for multiple groups with ff model
+# Solution on: https://stackoverflow.com/questions/22713325/fitting-several-regression-models-with-dplyr
+fit_lm_model <- function(portfolio_df) {
+  result_df <- portfolio_df %>%
+    group_by(yr_mon, category) %>%
+    group_modify(
+      # Use `tidy`, `glance` or `augment` to extract different information from the fitted models.
+      ~ tidy(lm(R_excess ~ MKT_RF + SMB + HML, data = .))
+    )
+}
 
 
-
+##########################################################################
 ## Beginning of task
 # Read stock data
 clean_stock <- read_csv("data/equity/clean_selected.csv") %>%
@@ -104,14 +114,9 @@ clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
 oil_gas_stock_equal_weight <- combine_ff_model(oil_gas_stock_equal_weight)
 utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
 
-# Model fitting for multiple groups
-# Solution on: https://stackoverflow.com/questions/22713325/fitting-several-regression-models-with-dplyr
-fitted_model <- clean_stock_equal_weight %>%
-  group_by(yr_mon, category) %>%
-  group_modify(
-    # Use `tidy`, `glance` or `augment` to extract different information from the fitted models.
-    ~ tidy(lm(R_excess ~ MKT_RF + SMB + HML, data = .))
-  )
+# Fit fama-french model to the portfolios
+clean_stock_equal_weight_model <- fit_lm_model(clean_stock_equal_weight)
+
 ##################################################################################
 ## Calculate monthly raw return
 price <- price %>%
