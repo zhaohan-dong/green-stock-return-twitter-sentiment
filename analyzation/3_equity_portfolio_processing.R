@@ -104,14 +104,15 @@ clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
 oil_gas_stock_equal_weight <- combine_ff_model(oil_gas_stock_equal_weight)
 utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
 
+
+# Model fitting for multiple groups
+# Solution on: https://stackoverflow.com/questions/22713325/fitting-several-regression-models-with-dplyr
 fitted_model <- clean_stock_equal_weight %>%
-  group_by(yr_mon) %>%
+  group_by(yr_mon, category) %>%
   group_modify(
     # Use `tidy`, `glance` or `augment` to extract different information from the fitted models.
     ~ tidy(lm(R_excess ~ MKT_RF + SMB + HML, data = .))
   )
-
-fitted_model %>% summarise(tidy(model), .groups = "keep")
 ##################################################################################
 ## Calculate monthly raw return
 price <- price %>%
