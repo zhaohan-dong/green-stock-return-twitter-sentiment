@@ -2,11 +2,10 @@
 ## Then we will calculate raw daily & monthly return and
 ## risk-adjusted return using fama-french three factor model
 
-library(tidyquant)
-library(tidyverse)
-library(timetk)
-library(broom)
-library(glue)
+#library(tidyquant)
+#library(timetk)
+#library(broom)
+#library(glue)
 
 require(tidyverse, quietly = TRUE)
 require(broom, quietly = TRUE)
@@ -23,6 +22,24 @@ cleanse_stock_data <- function(df) {
   return(result_df)
 }
 
+# Create dataframes for equal weighted portfolio
+equal_weight_portfolio <- function(df) {
+  result_df <- df %>%
+    filter(data_field == "PX_LAST") %>%
+    select(!data_field) %>%
+    pivot_wider(names_from = ticker,
+                values_from = value) %>%
+    # Replace NA values with previous value
+    na.locf()
+  
+  result_df <- result_df %>%
+    mutate(price = rowSums(result_df %>% select(!c(date, category))) /
+             (ncol(result_df) - 2))
+  
+  return(result_df)
+}
+
+# Read stock data
 clean_stock <- read_csv("data/equity/clean_selected.csv") %>%
   cleanse_stock_data() %>%
   mutate(category = "clean")
@@ -35,6 +52,11 @@ utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
   cleanse_stock_data() %>%
   mutate(category = "utility")
 
+# Create equal weight portfolio
+clean_stock_equal_weight <- equal_weight_portfolio(clean_stock)
+oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock)
+utility_stock_equal_weight <- equal_weight_portfolio(utility_stock)
+
 # Calculate daily raw return
 price <- rbind(clean_stock, oil_gas_stock, utility_stock) %>%
   filter(data_field == "PX_LAST") %>%
@@ -45,8 +67,12 @@ price <- rbind(clean_stock, oil_gas_stock, utility_stock) %>%
   ungroup() %>%
   rename(price = value)
 
-# Calculate monthly raw return
 
+
+
+
+
+## Calculate monthly raw return
 # Create groups by month using yr_mon column
 price$yr_mon <- format(price$date, "%Y-%m")
 
@@ -77,7 +103,10 @@ price <- left_join(price, ff_model_data) %>%
   rename(MKT_RF = `Mkt-RF`) %>%
   mutate(monthly_raw_return = monthly_raw_return * 100,
          daily_raw_return = daily_raw_return * 100,
-         R_excess = daily_raw_return - RF)
+         R_excess = daily_raw_return - RF) %>%
+  
+  # Delete the March 30 entry after calculating return for April 02
+  filter(date != as.Date("2012-03-30"))
 
 fitted_model <- price %>%
   filter(!is.na(monthly_raw_return)) %>%
@@ -89,3 +118,7 @@ fitted_model <- price %>%
 fitted_model <- fitted_model %>%
   left_join(y = price[!duplicated(price[ ,c("yr_mon", "ticker", "monthly_raw_return")]), ] %>%
               select(yr_mon, ticker, monthly_raw_return, category))
+
+
+
+
