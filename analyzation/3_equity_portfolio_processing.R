@@ -2,13 +2,9 @@
 ## Then we will calculate raw daily & monthly return and
 ## risk-adjusted return using fama-french three factor model
 
-#library(tidyquant)
-#library(timetk)
-#library(broom)
-#library(glue)
-
 # Load libraries
 require(tidyverse, quietly = TRUE)
+require(tidyquant, quietly = TRUE)
 require(broom, quietly = TRUE)
 
 
@@ -56,7 +52,7 @@ daily_raw_return <- function(portfolio_df) {
 }
 
 # Combine fama-french three-factor and portfolio df with daily return
-# and calculate daily excess return + add year-month group column
+# and calculate daily excess return + add year-month grouping helper column
 combine_ff_model <- function(portfolio_df) {
   ff_model_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.csv") %>%
     mutate(date = as.Date(as.character(date), "%Y%m%d"))
@@ -64,16 +60,12 @@ combine_ff_model <- function(portfolio_df) {
   result_df <- portfolio_df %>%
     left_join(ff_model_data) %>%
     rename(MKT_RF = `Mkt-RF`) %>%
-    mutate(Mkt-RF = Mkt-RF / 100,
-           SMB = SMB / 100,
-           HML = HML / 100,
-           RF = RF / 100,
+    mutate(daily_raw_return = daily_raw_return * 100,
            R_excess = daily_raw_return - RF)
   
   result_df$yr_mon <- format(result_df$date, "%Y-%m")
   return(result_df)
 }
-
 
 
 
@@ -93,6 +85,7 @@ utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
   mutate(category = "utility")
 
 # Create equal weight portfolio and calculate daily raw return
+# Deleting individual stock ticker data
 clean_stock_equal_weight <- equal_weight_portfolio(clean_stock) %>%
   daily_raw_return() %>%
   select(date, category, price, daily_raw_return) %>%
@@ -106,37 +99,18 @@ utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
   select(date, category, price, daily_raw_return) %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 
+# Combine fama-french factors and calculate risk-free excess return
 clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
+oil_gas_stock_equal_weight <- combine_ff_model(oil_gas_stock_equal_weight)
+utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
 
-
-
-
-# Calculate daily raw return
-price <- rbind(clean_stock, oil_gas_stock, utility_stock) %>%
-  filter(data_field == "PX_LAST") %>%
-  group_by(ticker) %>%
-  mutate(lag1 = lag(value, n = 1L, order_by = date)) %>%
-  mutate(daily_raw_return = (value - lag1) / lag1) %>%
-  select(!c(data_field, lag1)) %>%
-  ungroup() %>%
-  rename(price = value)
-
-# Load Fama-French three-factor model data
-ff_model_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.csv") %>%
-  mutate(date = as.Date(as.character(date), "%Y%m%d"))
-
-
-fitted_model <- price %>%
-  filter(!is.na(monthly_raw_return)) %>%
-  group_by(ticker, yr_mon) %>%
+fitted_model <- clean_stock_equal_weight %>%
+  group_by(yr_mon) %>%
   do(model = lm(R_excess ~ MKT_RF + SMB + HML, data = ., na.action = na.omit))
 
 
-
+##################################################################################
 ## Calculate monthly raw return
-# Create groups by month using yr_mon column
-price$yr_mon <- format(price$date, "%Y-%m")
-
 price <- price %>%
   group_by(ticker, yr_mon) %>%
   
@@ -166,8 +140,6 @@ price <- left_join(price, ff_model_data) %>%
   
   # Delete the March 30 entry after calculating return for April 02
   filter(date != as.Date("2012-03-30"))
-
-
 
 # test <- lm_table(price %>% filter(!is.na(monthly_raw_return)), R_excess ~ MKT_RF + SMB + HML, .groups = c("ticker", "yr_mon"))
 
