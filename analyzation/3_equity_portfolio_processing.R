@@ -53,22 +53,21 @@ daily_raw_return <- function(portfolio_df) {
 
 # Calculate monthly raw return
 monthly_raw_return <- function(portfolio_df) {
-  price %>%
-    group_by(ticker, yr_mon) %>%
+  result_df <- portfolio_df %>%
+    group_by(yr_mon) %>%
     
     # Select last day of month in the data
     filter(date == max(date)) %>%
     ungroup() %>%
     
-    # Regroup by ticker and calculate monthly raw return
-    group_by(ticker) %>%
+    # Calculate monthly raw return
     mutate(lag1 = lag(price)) %>%
     mutate(monthly_raw_return = (price - lag1) / lag1) %>%
-    select(c(ticker, yr_mon, monthly_raw_return)) %>%
-    ungroup() %>%
+    select(c(yr_mon, monthly_raw_return)) %>%
     
     # Merge resulting data with original dataframe
-    right_join(y = price)
+    right_join(y = portfolio_df)
+  return(result_df)
 }
 
 # Combine fama-french three-factor and portfolio df with daily return
@@ -119,14 +118,17 @@ utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
 clean_stock_equal_weight <- equal_weight_portfolio(clean_stock) %>%
   daily_raw_return() %>%
   select(date, category, price, daily_raw_return) %>%
+  monthly_raw_return() %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock) %>%
   daily_raw_return() %>%
   select(date, category, price, daily_raw_return) %>%
+  monthly_raw_return() %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
   daily_raw_return() %>%
   select(date, category, price, daily_raw_return) %>%
+  monthly_raw_return() %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 
 # Combine fama-french factors and calculate risk-free excess return
