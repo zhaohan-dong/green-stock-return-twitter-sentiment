@@ -106,9 +106,12 @@ utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
 
 fitted_model <- clean_stock_equal_weight %>%
   group_by(yr_mon) %>%
-  do(model = lm(R_excess ~ MKT_RF + SMB + HML, data = ., na.action = na.omit))
+  group_modify(
+    # Use `tidy`, `glance` or `augment` to extract different information from the fitted models.
+    ~ tidy(lm(R_excess ~ MKT_RF + SMB + HML, data = .))
+  )
 
-
+fitted_model %>% summarise(tidy(model), .groups = "keep")
 ##################################################################################
 ## Calculate monthly raw return
 price <- price %>%
