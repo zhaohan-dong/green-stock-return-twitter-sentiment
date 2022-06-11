@@ -26,16 +26,18 @@ cleanse_stock_data <- function(df) {
   return(result_df)
 }
 
-# Create dataframes for equal weighted portfolio
+# Create dataframes for equal weighted portfolio from cleansed csv
 equal_weight_portfolio <- function(df) {
+  # Select and tidy data
   result_df <- df %>%
     filter(data_field == "PX_LAST") %>%
     select(!data_field) %>%
     pivot_wider(names_from = ticker,
                 values_from = value) %>%
-    # Replace NA values with previous value
+    # Replace NA values with previous value from column (same ticker)
     na.locf()
   
+  # Calculate return
   result_df <- result_df %>%
     mutate(price = rowSums(result_df %>% select(!c(date, category))) /
              (ncol(result_df) - 2))
@@ -43,7 +45,36 @@ equal_weight_portfolio <- function(df) {
   return(result_df)
 }
 
-# Calculate daily raw return of portfolio
+# Calculate daily raw return of portfolio from portfolio df
+daily_raw_return <- function(portfolio_df) {
+  result_df <- portfolio_df %>%
+    mutate(lag1 = lag(price, n = 1L, order_by = date)) %>%
+    mutate(daily_raw_return = (price - lag1) / lag1) %>%
+    select(!lag1) %>%
+    ungroup()
+  return(result_df)
+}
+
+# Combine fama-french three-factor and portfolio df with daily return
+# and calculate daily excess return + add year-month group column
+combine_ff_model <- function(portfolio_df) {
+  ff_model_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.csv") %>%
+    mutate(date = as.Date(as.character(date), "%Y%m%d"))
+  
+  result_df <- portfolio_df %>%
+    left_join(ff_model_data) %>%
+    rename(MKT_RF = `Mkt-RF`) %>%
+    mutate(Mkt-RF = Mkt-RF / 100,
+           SMB = SMB / 100,
+           HML = HML / 100,
+           RF = RF / 100,
+           R_excess = daily_raw_return - RF)
+  
+  result_df$yr_mon <- format(result_df$date, "%Y-%m")
+  return(result_df)
+}
+
+
 
 
 
@@ -61,14 +92,21 @@ utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
   cleanse_stock_data() %>%
   mutate(category = "utility")
 
-# Create equal weight portfolio
-clean_stock_equal_weight <- equal_weight_portfolio(clean_stock)
-oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock)
-utility_stock_equal_weight <- equal_weight_portfolio(utility_stock)
+# Create equal weight portfolio and calculate daily raw return
+clean_stock_equal_weight <- equal_weight_portfolio(clean_stock) %>%
+  daily_raw_return() %>%
+  select(date, category, price, daily_raw_return) %>%
+  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
+oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock) %>%
+  daily_raw_return() %>%
+  select(date, category, price, daily_raw_return) %>%
+  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
+utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
+  daily_raw_return() %>%
+  select(date, category, price, daily_raw_return) %>%
+  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 
-
-
-
+clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
 
 
 
@@ -83,8 +121,15 @@ price <- rbind(clean_stock, oil_gas_stock, utility_stock) %>%
   ungroup() %>%
   rename(price = value)
 
+# Load Fama-French three-factor model data
+ff_model_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.csv") %>%
+  mutate(date = as.Date(as.character(date), "%Y%m%d"))
 
 
+fitted_model <- price %>%
+  filter(!is.na(monthly_raw_return)) %>%
+  group_by(ticker, yr_mon) %>%
+  do(model = lm(R_excess ~ MKT_RF + SMB + HML, data = ., na.action = na.omit))
 
 
 
@@ -110,9 +155,7 @@ price <- price %>%
   right_join(y = price)
 
 
-# Load Fama-French three-factor model data
-ff_model_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.csv") %>%
-  mutate(date = as.Date(as.character(date), "%Y%m%d"))
+
 
 # Combine ff model data from percentage, left join to include only market open days
 price <- left_join(price, ff_model_data) %>%
@@ -124,10 +167,7 @@ price <- left_join(price, ff_model_data) %>%
   # Delete the March 30 entry after calculating return for April 02
   filter(date != as.Date("2012-03-30"))
 
-fitted_model <- price %>%
-  filter(!is.na(monthly_raw_return)) %>%
-  group_by(ticker, yr_mon) %>%
-  do(model = lm(R_excess ~ MKT_RF + SMB + HML, data = ., na.action = na.omit))
+
 
 # test <- lm_table(price %>% filter(!is.na(monthly_raw_return)), R_excess ~ MKT_RF + SMB + HML, .groups = c("ticker", "yr_mon"))
 
