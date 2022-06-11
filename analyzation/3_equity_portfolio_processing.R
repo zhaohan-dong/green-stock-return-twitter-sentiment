@@ -7,10 +7,14 @@
 #library(broom)
 #library(glue)
 
+# Load libraries
 require(tidyverse, quietly = TRUE)
 require(broom, quietly = TRUE)
 
-# Define function to cleanse data
+
+
+## Define functions
+# Cleanse data input
 cleanse_stock_data <- function(df) {
   result_df <- df %>%
     pivot_longer(cols = !c(ticker, data_field),
@@ -39,6 +43,11 @@ equal_weight_portfolio <- function(df) {
   return(result_df)
 }
 
+# Calculate daily raw return of portfolio
+
+
+
+## Beginning of task
 # Read stock data
 clean_stock <- read_csv("data/equity/clean_selected.csv") %>%
   cleanse_stock_data() %>%
@@ -56,6 +65,13 @@ utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
 clean_stock_equal_weight <- equal_weight_portfolio(clean_stock)
 oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock)
 utility_stock_equal_weight <- equal_weight_portfolio(utility_stock)
+
+
+
+
+
+
+
 
 # Calculate daily raw return
 price <- rbind(clean_stock, oil_gas_stock, utility_stock) %>%
