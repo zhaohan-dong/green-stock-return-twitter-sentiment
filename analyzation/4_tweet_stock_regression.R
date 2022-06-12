@@ -1,4 +1,4 @@
-## Regression betwen tweets and stock
+## Regression between tweets and stock
 
 require(tidyverse, quietly = TRUE)
 
