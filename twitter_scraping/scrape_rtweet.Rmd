@@ -24,7 +24,9 @@ Load the tweet_id from the csv file and store as strings.
 
 ```{r}
 setwd("../")
-tweet_id <- read_csv("/data/1_Tweet_IDs.csv", col_types = "c")
+tweet_id <- read_csv("data/1_Tweet_IDs.csv", col_types = "c") %>%
+  # We know that we want data after 2011-04-01 and 53607605465128960 is the first one on that day
+  filter(as.double(id) >= 53607605465128960)
 ```
 
 ## Define twitter look up function
