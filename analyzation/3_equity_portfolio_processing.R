@@ -36,10 +36,9 @@ equal_weight_portfolio <- function(df) {
   # Calculate return
   result_df <- result_df %>%
     mutate(price = rowSums(result_df %>% select(!c(date, category))) /
-             (ncol(result_df) - 2))
-  
-  # Add month helper column
-  result_df$yr_mon <- format(result_df$date, "%Y-%m")
+             (ncol(result_df) - 2)) %>%
+    # Add month helper column
+    mutate(yr_mon = format(date, "%Y-%m"), .after = date)
   return(result_df)
 }
 
@@ -136,17 +135,17 @@ utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
 clean_stock_equal_weight <- equal_weight_portfolio(clean_stock) %>%
   daily_raw_return() %>%
   monthly_raw_return() %>%
-  select(date, category, price, daily_raw_return, monthly_raw_return, yr_mon) %>%
+  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock) %>%
   daily_raw_return() %>%
   monthly_raw_return() %>%
-  select(date, category, price, daily_raw_return, monthly_raw_return, yr_mon) %>%
+  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
   daily_raw_return() %>%
   monthly_raw_return() %>%
-  select(date, category, price, daily_raw_return, monthly_raw_return, yr_mon) %>%
+  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 
 # Combine fama-french factors and calculate risk-free excess return
