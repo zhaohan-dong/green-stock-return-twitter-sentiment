@@ -39,4 +39,7 @@ nyc_wx <- nyc_wx %>%
   # Calculate abnormal temperature
   mutate(ab_temp = TAVG - prev_yrs_tavg - monthly_lagged_tavg_deviation)
 
+nyc_wx <- rename_with(nyc_wx, tolower) %>%
+  filter(!is.na(ab_temp))
+
 write.csv(nyc_wx, "data/KNYC_monthly_summary_processed.csv")

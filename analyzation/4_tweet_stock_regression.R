@@ -7,7 +7,8 @@ require(rtweet, quietly = TRUE)
 twitter_df <- read_twitter_csv("data/tweet_sentiment.csv")
 stock_equal_weight_raw <- read_csv("data/stock_equal_weight_raw.csv")
 stock_equal_weight_ff <- read_csv("data/stock_equal_weight_ff.csv")
-wx_df <- read_csv("data/KNYC_monthly_summary_processed.csv")
+wx_df <- read_csv("data/KNYC_monthly_summary_processed.csv") %>%
+  mutate(DATE = as.Date(DATE))
 oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv")
 
 twitter_df <- twitter_df %>%
@@ -17,4 +18,14 @@ twitter_df <- twitter_df %>%
   filter(date >= as.Date("2011-04-01"))
 
 twitter_df <- twitter_df %>%
-  add_count(date, wt = NULL, name = "daily_count")
+  group_by(date) %>%
+  summarize(across(sentiment, lst(mean, sd)))
+
+
+ggplot(data=twitter_df, aes(x=date, y=sentiment_mean, group=1)) +
+  geom_line()+
+  geom_point()
+
+ggplot(data=wx_df, aes(x=DATE, y=ab_temp, group=1)) +
+  geom_line()+
+  geom_point()
