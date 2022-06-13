@@ -12,4 +12,6 @@ oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv")
 
 twitter_df <- twitter_df %>%
   mutate(date = as.Date(created_at), .after = created_at) %>%
-  select(-created_at)
+  select(-created_at) %>%
+  select(date, status_id, retweet_count, quote_count, reply_count, sentiment) %>%
+  filter(date >= as.Date("2011-04-01"))
