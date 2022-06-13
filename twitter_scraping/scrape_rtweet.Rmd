@@ -68,7 +68,7 @@ while (i < 14353859) {
   print("-----")
   i <- i+90000
   
-  # Sleep for 500 sec
-  Sys.sleep(500)
+  # Sleep for 600 sec
+  Sys.sleep(600)
 }
 ```
