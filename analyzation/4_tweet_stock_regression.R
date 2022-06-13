@@ -15,3 +15,6 @@ twitter_df <- twitter_df %>%
   select(-created_at) %>%
   select(date, status_id, retweet_count, quote_count, reply_count, sentiment) %>%
   filter(date >= as.Date("2011-04-01"))
+
+twitter_df <- twitter_df %>%
+  add_count(date, wt = NULL, name = "daily_count")
