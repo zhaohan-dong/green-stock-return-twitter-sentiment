@@ -48,7 +48,7 @@ if (!exists("tweet_collection")) {
   tweet_collection <- tibble()
 }
 
-while (i < 14353859) {
+while (i < nrow(tweet_id)) {
   # Start process timing
   ptm <- proc.time()
   
@@ -70,7 +70,7 @@ while (i < 14353859) {
   print("-----")
   i <- i+90000
   
-  # Sleep for 600 sec
-  Sys.sleep(600)
+  # Sleep for 720 sec
+  Sys.sleep(720)
 }
 ```
