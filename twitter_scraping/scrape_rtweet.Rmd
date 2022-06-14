@@ -70,7 +70,7 @@ while (i < nrow(tweet_id)) {
   print("-----")
   i <- i+90000
   
-  # Sleep for 15 min total
-  Sys.sleep(900 - (proc.time() - ptm)[3])
+  # Sleep for 17 min total
+  Sys.sleep(1020 - (proc.time() - ptm)[3])
 }
 ```
