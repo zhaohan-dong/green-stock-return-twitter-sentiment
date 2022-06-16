@@ -33,6 +33,7 @@ twitter_summary <- twitter_df %>%
   summarize(across(sentiment, list(mean = ~ mean(.x, na.rm = TRUE), sd = ~ sd(.x, na.rm = TRUE)))) %>%
   mutate(count(twitter_df, date, name = "daily_count"))
 
+
 twitter_summary <- twitter_summary %>%
   mutate(yr_mon = format(date, "%Y-%m"), .after = date) %>%
   group_by(yr_mon) %>%

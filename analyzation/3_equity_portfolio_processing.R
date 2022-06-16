@@ -8,7 +8,6 @@ require(tidyquant, quietly = TRUE)
 require(broom, quietly = TRUE)
 
 
-
 ## Define functions
 # Cleanse data input
 cleanse_stock_data <- function(df) {
@@ -42,6 +41,7 @@ equal_weight_portfolio <- function(df) {
   return(result_df)
 }
 
+# NOTE: NOT IMPLEMENTED
 # Create dataframes for value weighted portfolio from cleansed csv
 value_weight_portfolio <- function(df) {
   # Select and tidy data
@@ -105,7 +105,7 @@ combine_ff_model <- function(portfolio_df) {
 
 # Model fitting for multiple groups with ff model
 # Solution on: https://stackoverflow.com/questions/22713325/fitting-several-regression-models-with-dplyr
-fit_lm_model <- function(portfolio_df) {
+fit_ff_model <- function(portfolio_df) {
   result_df <- portfolio_df %>%
     group_by(yr_mon, category) %>%
     group_modify(
@@ -114,6 +114,15 @@ fit_lm_model <- function(portfolio_df) {
     )
 }
 
+# Fit CAPM model because of unsatisfactory ff-model
+fit_capm_model <- function(portfolio_df) {
+  result_df <- portfolio_df %>%
+    group_by(yr_mon, category) %>%
+    group_modify(
+      # Use `tidy`, `glance` or `augment` to extract different information from the fitted models.
+      ~ tidy(lm(R_excess ~ MKT_RF, data = .))
+    )
+}
 
 ############################################################################
 ## Beginning of task
@@ -155,9 +164,14 @@ utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
 
 
 # Fit fama-french model to the portfolios
-clean_stock_equal_weight_model <- fit_lm_model(clean_stock_equal_weight)
-oil_gas_stock_equal_weight_model <- fit_lm_model(oil_gas_stock_equal_weight)
-utility_stock_equal_weight_model <- fit_lm_model(utility_stock_equal_weight)
+clean_stock_equal_weight_ff <- fit_ff_model(clean_stock_equal_weight)
+oil_gas_stock_equal_weight_ff <- fit_ff_model(oil_gas_stock_equal_weight)
+utility_stock_equal_weight_ff <- fit_ff_model(utility_stock_equal_weight)
+
+# Fit capm model
+clean_stock_equal_weight_capm <- fit_capm_model(clean_stock_equal_weight)
+oil_gas_stock_equal_weight_capm <- fit_capm_model(oil_gas_stock_equal_weight)
+utility_stock_equal_weight_capm <- fit_capm_model(utility_stock_equal_weight)
 
 # Save as csv
 rbind(clean_stock_equal_weight,
@@ -165,10 +179,15 @@ rbind(clean_stock_equal_weight,
       utility_stock_equal_weight) %>%
   write_csv("data/stock_equal_weight_raw.csv")
 
-rbind(clean_stock_equal_weight_model,
-      oil_gas_stock_equal_weight_model,
-      utility_stock_equal_weight_model) %>%
+rbind(clean_stock_equal_weight_ff,
+      oil_gas_stock_equal_weight_ff,
+      utility_stock_equal_weight_ff) %>%
   write_csv("data/stock_equal_weight_ff.csv")
+
+rbind(clean_stock_equal_weight_capm,
+      oil_gas_stock_equal_weight_capm,
+      utility_stock_equal_weight_capm) %>%
+  write_csv("data/stock_equal_weight_capm.csv")
 
 ###############################################################################
 
