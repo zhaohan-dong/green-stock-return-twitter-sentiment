@@ -1,14 +1,20 @@
 ## Regression between tweets and stock
 
+require(tidyquant, quietly = TRUE)
+require(broom, quietly = TRUE)
 require(tidyverse, quietly = TRUE)
 require(rtweet, quietly = TRUE)
 
 # Load data and convert date column from character to date type
 twitter_df <- read_twitter_csv("data/tweet_sentiment.csv")
 stock_equal_weight_raw <- read_csv("data/stock_equal_weight_raw.csv") %>%
-  mutate(date = as.Date(date))
-stock_equal_weight_ff <- read_csv("data/stock_equal_weight_ff.csv") %>%
-  mutate(date = as.Date(date))
+  mutate(date = as.Date(date)) %>%
+  filter(category == "oil-gas") %>%
+  group_by(yr_mon) %>%
+  filter(date == min(date)) %>%
+  ungroup()
+stock_equal_weight_ff <- read_csv("data/stock_equal_weight_ff.csv") #%>%
+  filter(category == "oil-gas", term == "(Intercept)")
 wx_df <- read_csv("data/KNYC_monthly_summary_processed.csv") %>%
   mutate(date = as.Date(date))
 oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv") %>%
@@ -27,7 +33,12 @@ twitter_summary <- twitter_df %>%
   summarize(across(sentiment, list(mean = ~ mean(.x, na.rm = TRUE), sd = ~ sd(.x, na.rm = TRUE)))) %>%
   mutate(count(twitter_df, date, name = "daily_count"))
 
-
+twitter_summary <- twitter_summary %>%
+  mutate(yr_mon = format(date, "%Y-%m"), .after = date) %>%
+  group_by(yr_mon) %>%
+  mutate(month_count = sum(daily_count)) %>%
+  filter(date == min(date)) %>%
+  ungroup()
 
 ggplot(data=twitter_summary, aes(x=date, y=sentiment_mean, group=1)) +
   geom_line()+
@@ -40,4 +51,10 @@ ggplot(data=twitter_summary, aes(x=date, y=daily_count, group=1)) +
 ggplot(data=wx_df, aes(x=date, y=ab_temp, group=1)) +
   geom_line()+
   geom_point()
+
+analysis_df <- inner_join(stock_equal_weight_ff, twitter_summary, by = "yr_mon")
+
+model <- cor(analysis_df$estimate, analysis_df$month_count)
+
+model %>% tidy()
 
