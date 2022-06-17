@@ -89,6 +89,7 @@ monthly_raw_return <- function(portfolio_df) {
   return(result_df)
 }
 
+
 # Combine fama-french three-factor and portfolio df with daily return
 # and calculate daily excess return + add year-month grouping helper column
 combine_ff_model <- function(portfolio_df) {
@@ -157,6 +158,61 @@ utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
   select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 
+clean_long <- clean_stock %>%
+  filter(data_field == "PX_LAST") %>%
+  pivot_wider(names_from = ticker, values_from = value) %>%
+  select(-data_field, -category) %>%
+  na.locf()
+
+oil_gas_short <- oil_gas_stock %>%
+  filter(data_field == "PX_LAST") %>%
+  mutate(value = -value) %>% # Short oil and gas stocks
+  pivot_wider(names_from = ticker, values_from = value) %>%
+  select(-data_field, -category) %>%
+  na.locf()
+
+# Green minus brown long-short
+gmb_portfolio <- merge(clean_long, oil_gas_short) %>%
+  mutate(price = rowSums(select(., !date)), .after = date)
+
+gmb_return <- gmb_portfolio %>%
+  mutate(yr_mon = format(date, "%Y-%m"), yr = format(date, "%Y"), .after = date) %>%
+  daily_raw_return() %>%
+  monthly_raw_return() %>%
+  mutate(daily_raw_return = -daily_raw_return,
+         monthly_raw_return = -monthly_raw_return) %>%
+  select(date, yr_mon, yr, price, daily_raw_return, monthly_raw_return) %>%
+  filter(date != as.Date("2012-03-30"))
+
+ggplot(gmb_return, aes(x=date, y=daily_raw_return)) +
+  geom_line() +
+  geom_point()
+
+gmb_monthly <- gmb_return %>%
+  group_by(yr_mon) %>%
+  filter(date == min(date)) %>%
+  ungroup() %>%
+  select(!daily_raw_return) 
+
+gmb_monthly_summary <- gmb_return %>% 
+  group_by(yr_mon) %>%
+  summarise(date, across(daily_raw_return, c(mean = mean, sd = sd))) %>%
+  filter(date == min(date))
+
+ggplot(gmb_monthly_summary, aes(x=date, y=daily_raw_return_sd)) +
+  geom_line() +
+  geom_point()
+
+## raw return std dev is significantly related to date!
+test_model <- lm(daily_raw_return_sd ~ date, gmb_monthly_summary)
+
+tidy(test_model)
+
+ggplot(gmb_return, aes(x=date, y=monthly_raw_return)) +
+  geom_line() +
+  geom_point()
+
+
 # Combine fama-french factors and calculate risk-free excess return
 clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
 oil_gas_stock_equal_weight <- combine_ff_model(oil_gas_stock_equal_weight)
@@ -188,6 +244,39 @@ rbind(clean_stock_equal_weight_capm,
       oil_gas_stock_equal_weight_capm,
       utility_stock_equal_weight_capm) %>%
   write_csv("data/stock_equal_weight_capm.csv")
+
+test_model <- lm(R_excess ~ MKT_RF, data = clean_stock_equal_weight)
+test_result <- tidy(test_model)
+clean_stock_equal_weight <- clean_stock_equal_weight %>%
+  mutate(capm = test_result[2, "estimate"] * MKT_RF,
+         capm_excess = monthly_raw_return - capm) %>%
+  group_by(yr_mon) %>%
+  filter(date == min(date))
+
+volume <- function(df) {
+  # Select and tidy data
+  result_df <- df %>%
+    filter(data_field == "PX_VOLUME") %>%
+    select(!data_field) %>%
+    pivot_wider(names_from = ticker,
+                values_from = value) %>%
+    # Replace NA values with previous value from column (same ticker)
+    na.locf()
+  
+  # Calculate return
+  result_df <- result_df %>%
+    mutate(volume = rowSums(result_df %>% select(!c(date, category)))) %>%
+    # Add month helper column
+    mutate(yr_mon = format(date, "%Y-%m"), .after = date)
+  return(result_df)
+}
+  
+test <- volume(clean_stock)
+
+ggplot(data=twitter_summary, aes(x=date, y=sentiment_mean, group=1)) +
+  geom_line()+
+  geom_point()
+
 
 ###############################################################################
 

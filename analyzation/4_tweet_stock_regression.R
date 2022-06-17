@@ -9,7 +9,8 @@ require(rtweet, quietly = TRUE)
 twitter_df <- read_twitter_csv("data/tweet_sentiment.csv")
 stock_equal_weight_raw <- read_csv("data/stock_equal_weight_raw.csv") %>%
   mutate(date = as.Date(date)) %>%
-  filter(category == "oil-gas") %>%
+  filter(category == "clean",
+         date < as.Date("2018-05-01")) %>%
   group_by(yr_mon) %>%
   filter(date == min(date)) %>%
   ungroup()
@@ -39,23 +40,35 @@ twitter_summary <- twitter_summary %>%
   group_by(yr_mon) %>%
   mutate(month_count = sum(daily_count)) %>%
   filter(date == min(date)) %>%
-  ungroup()
+  ungroup() %>%
+  filter(date >= as.Date("2012-04-01"))
 
 ggplot(data=twitter_summary, aes(x=date, y=sentiment_mean, group=1)) +
   geom_line()+
   geom_point()
 
-ggplot(data=twitter_summary, aes(x=date, y=daily_count, group=1)) +
+ggplot(data=twitter_summary, aes(x=date, y=month_count, group=1)) +
   geom_line()+
+  scale_x_date()+
   geom_point()
 
 ggplot(data=wx_df, aes(x=date, y=ab_temp, group=1)) +
   geom_line()+
   geom_point()
 
+ggplot(data=stock_equal_weight_raw, aes(x=date)) +
+  geom_line(aes(y = R_excess), color = "darkred") + 
+  geom_point(aes(y = R_ex)) +
+  geom_line(aes(y = MKT_RF), color="steelblue", linetype="twodash") +
+  geom_point(aes(y = MKT_RF))
+
+cor(stock_equal_weight_raw$month_count, stock_equal_weight_raw$MKT_RF)
+cor(stock_equal_weight_raw$R_excess, twitter_summary$month_count)
+cor(twitter_summary$sentiment_mean, twitter_summary$month_count)
+
+
 analysis_df <- inner_join(stock_equal_weight_ff, twitter_summary, by = "yr_mon")
 
 model <- cor(analysis_df$estimate, analysis_df$month_count)
 
-model %>% tidy()
 
