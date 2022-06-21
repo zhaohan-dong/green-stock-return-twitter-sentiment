@@ -7,7 +7,6 @@ require(tidyverse, quietly = TRUE)
 require(tidyquant, quietly = TRUE)
 require(broom, quietly = TRUE)
 
-
 ## Define functions
 # Cleanse data input
 cleanse_stock_data <- function(df) {
@@ -215,11 +214,6 @@ gmb_monthly_summary <- gmb_return %>%
 # Save gmb portfolio to CSV
 write_csv(gmb_monthly_summary, "data/gmb_monthly_summary.csv")
 
-
-ggplot(gmb_monthly_summary, aes(x=date, y=daily_raw_return_sd)) +
-  geom_line() +
-  geom_point()
-
 ## raw return std dev is significantly related to date!
 test_model <- lm(daily_raw_return_sd ~ date, gmb_monthly_summary)
 
@@ -228,14 +222,6 @@ tidy(test_model)
 ggplot(gmb_return, aes(x=date, y=monthly_raw_return)) +
   geom_line() +
   geom_point()
-
-test_model <- lm(R_excess ~ MKT_RF, data = clean_stock_equal_weight)
-test_result <- tidy(test_model)
-clean_stock_equal_weight <- clean_stock_equal_weight %>%
-  mutate(capm = test_result[2, "estimate"] * MKT_RF,
-         capm_excess = monthly_raw_return - capm) %>%
-  group_by(yr_mon) %>%
-  filter(date == min(date))
 
 test <- volume(clean_stock)
 
