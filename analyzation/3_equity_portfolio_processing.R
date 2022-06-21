@@ -136,27 +136,27 @@ oil_gas_stock <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
   cleanse_stock_data() %>%
   mutate(category = "oil-gas")
 
-utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
-  cleanse_stock_data() %>%
-  mutate(category = "utility")
+# utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
+#   cleanse_stock_data() %>%
+#   mutate(category = "utility")
 
 # Create equal weight portfolio and calculate daily raw return
 # Deleting individual stock ticker data
-clean_stock_equal_weight <- equal_weight_portfolio(clean_stock) %>%
-  daily_raw_return() %>%
-  monthly_raw_return() %>%
-  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
-  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
-oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock) %>%
-  daily_raw_return() %>%
-  monthly_raw_return() %>%
-  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
-  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
-utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
-  daily_raw_return() %>%
-  monthly_raw_return() %>%
-  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
-  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
+# clean_stock_equal_weight <- equal_weight_portfolio(clean_stock) %>%
+#   daily_raw_return() %>%
+#   monthly_raw_return() %>%
+#   select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
+#   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
+# oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock) %>%
+#   daily_raw_return() %>%
+#   monthly_raw_return() %>%
+#   select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
+#   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
+# utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
+#   daily_raw_return() %>%
+#   monthly_raw_return() %>%
+#   select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
+#   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 
 clean_long <- clean_stock %>%
   filter(data_field == "PX_LAST") %>%
