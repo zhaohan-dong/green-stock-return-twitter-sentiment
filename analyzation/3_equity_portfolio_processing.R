@@ -43,21 +43,21 @@ equal_weight_portfolio <- function(df) {
 
 # NOTE: NOT IMPLEMENTED
 # Create dataframes for value weighted portfolio from cleansed csv
-value_weight_portfolio <- function(df) {
-  # Select and tidy data
-  result_df <- df %>%
-    filter(data_field == c("PX_LAST", "CUR_MKT_CAP")) %>%
-    pivot_wider(names_from = c(ticker, data_field),
-                values_from = value) %>%
-    # Replace NA values with previous value from column (same ticker)
-    na.locf() %>%
-    mutate(mkt_cap_sum = rowSums(select(., ends_with("_CUR_MKT_CAP"))))
-  
-  # Add month helper column
-  result_df$yr_mon <- format(result_df$date, "%Y-%m")
-  
-  return(result_df)
-}
+# value_weight_portfolio <- function(df) {
+#   # Select and tidy data
+#   result_df <- df %>%
+#     filter(data_field == c("PX_LAST", "CUR_MKT_CAP")) %>%
+#     pivot_wider(names_from = c(ticker, data_field),
+#                 values_from = value) %>%
+#     # Replace NA values with previous value from column (same ticker)
+#     na.locf() %>%
+#     mutate(mkt_cap_sum = rowSums(select(., ends_with("_CUR_MKT_CAP"))))
+#   
+#   # Add month helper column
+#   result_df$yr_mon <- format(result_df$date, "%Y-%m")
+#   
+#   return(result_df)
+# }
 
 
 # Calculate daily raw return of portfolio from portfolio df
@@ -125,6 +125,25 @@ fit_capm_model <- function(portfolio_df) {
     )
 }
 
+# Calculate daily volume
+volume <- function(df) {
+  # Select and tidy data
+  result_df <- df %>%
+    filter(data_field == "PX_VOLUME") %>%
+    select(!data_field) %>%
+    pivot_wider(names_from = ticker,
+                values_from = value) %>%
+    # Replace NA values with previous value from column (same ticker)
+    na.locf()
+  
+  # Calculate return
+  result_df <- result_df %>%
+    mutate(volume = rowSums(result_df %>% select(!c(date, category)))) %>%
+    # Add month helper column
+    mutate(yr_mon = format(date, "%Y-%m"), .after = date)
+  return(result_df)
+}
+
 ############################################################################
 ## Beginning of task
 # Read stock data
@@ -188,16 +207,14 @@ ggplot(gmb_return, aes(x=date, y=daily_raw_return)) +
   geom_line() +
   geom_point()
 
-gmb_monthly <- gmb_return %>%
-  group_by(yr_mon) %>%
-  filter(date == min(date)) %>%
-  ungroup() %>%
-  select(!daily_raw_return) 
-
 gmb_monthly_summary <- gmb_return %>% 
   group_by(yr_mon) %>%
   summarise(date, across(daily_raw_return, c(mean = mean, sd = sd))) %>%
   filter(date == min(date))
+
+# Save gmb portfolio to CSV
+write_csv(gmb_monthly_summary, "data/gmb_monthly_summary.csv")
+
 
 ggplot(gmb_monthly_summary, aes(x=date, y=daily_raw_return_sd)) +
   geom_line() +
@@ -212,39 +229,6 @@ ggplot(gmb_return, aes(x=date, y=monthly_raw_return)) +
   geom_line() +
   geom_point()
 
-
-# Combine fama-french factors and calculate risk-free excess return
-clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
-oil_gas_stock_equal_weight <- combine_ff_model(oil_gas_stock_equal_weight)
-utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
-
-
-# Fit fama-french model to the portfolios
-clean_stock_equal_weight_ff <- fit_ff_model(clean_stock_equal_weight)
-oil_gas_stock_equal_weight_ff <- fit_ff_model(oil_gas_stock_equal_weight)
-utility_stock_equal_weight_ff <- fit_ff_model(utility_stock_equal_weight)
-
-# Fit capm model
-clean_stock_equal_weight_capm <- fit_capm_model(clean_stock_equal_weight)
-oil_gas_stock_equal_weight_capm <- fit_capm_model(oil_gas_stock_equal_weight)
-utility_stock_equal_weight_capm <- fit_capm_model(utility_stock_equal_weight)
-
-# Save as csv
-rbind(clean_stock_equal_weight,
-      oil_gas_stock_equal_weight,
-      utility_stock_equal_weight) %>%
-  write_csv("data/stock_equal_weight_raw.csv")
-
-rbind(clean_stock_equal_weight_ff,
-      oil_gas_stock_equal_weight_ff,
-      utility_stock_equal_weight_ff) %>%
-  write_csv("data/stock_equal_weight_ff.csv")
-
-rbind(clean_stock_equal_weight_capm,
-      oil_gas_stock_equal_weight_capm,
-      utility_stock_equal_weight_capm) %>%
-  write_csv("data/stock_equal_weight_capm.csv")
-
 test_model <- lm(R_excess ~ MKT_RF, data = clean_stock_equal_weight)
 test_result <- tidy(test_model)
 clean_stock_equal_weight <- clean_stock_equal_weight %>%
@@ -253,29 +237,39 @@ clean_stock_equal_weight <- clean_stock_equal_weight %>%
   group_by(yr_mon) %>%
   filter(date == min(date))
 
-volume <- function(df) {
-  # Select and tidy data
-  result_df <- df %>%
-    filter(data_field == "PX_VOLUME") %>%
-    select(!data_field) %>%
-    pivot_wider(names_from = ticker,
-                values_from = value) %>%
-    # Replace NA values with previous value from column (same ticker)
-    na.locf()
-  
-  # Calculate return
-  result_df <- result_df %>%
-    mutate(volume = rowSums(result_df %>% select(!c(date, category)))) %>%
-    # Add month helper column
-    mutate(yr_mon = format(date, "%Y-%m"), .after = date)
-  return(result_df)
-}
-  
 test <- volume(clean_stock)
 
-ggplot(data=twitter_summary, aes(x=date, y=sentiment_mean, group=1)) +
-  geom_line()+
-  geom_point()
+# # Combine fama-french factors and calculate risk-free excess return
+# clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
+# oil_gas_stock_equal_weight <- combine_ff_model(oil_gas_stock_equal_weight)
+# utility_stock_equal_weight <- combine_ff_model(utility_stock_equal_weight)
+# 
+# 
+# # Fit fama-french model to the portfolios
+# clean_stock_equal_weight_ff <- fit_ff_model(clean_stock_equal_weight)
+# oil_gas_stock_equal_weight_ff <- fit_ff_model(oil_gas_stock_equal_weight)
+# utility_stock_equal_weight_ff <- fit_ff_model(utility_stock_equal_weight)
+# 
+# # Fit capm model
+# clean_stock_equal_weight_capm <- fit_capm_model(clean_stock_equal_weight)
+# oil_gas_stock_equal_weight_capm <- fit_capm_model(oil_gas_stock_equal_weight)
+# utility_stock_equal_weight_capm <- fit_capm_model(utility_stock_equal_weight)
+# 
+# # Save as csv
+# rbind(clean_stock_equal_weight,
+#       oil_gas_stock_equal_weight,
+#       utility_stock_equal_weight) %>%
+#   write_csv("data/stock_equal_weight_raw.csv")
+# 
+# rbind(clean_stock_equal_weight_ff,
+#       oil_gas_stock_equal_weight_ff,
+#       utility_stock_equal_weight_ff) %>%
+#   write_csv("data/stock_equal_weight_ff.csv")
+# 
+# rbind(clean_stock_equal_weight_capm,
+#       oil_gas_stock_equal_weight_capm,
+#       utility_stock_equal_weight_capm) %>%
+#   write_csv("data/stock_equal_weight_capm.csv")
 
 
 ###############################################################################
