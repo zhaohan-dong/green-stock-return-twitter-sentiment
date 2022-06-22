@@ -17,7 +17,7 @@ wx_df <- read_csv("data/KNYC_monthly_summary_processed.csv") %>%
   mutate(date = as.Date(date))
 oil_price_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv") %>%
   mutate(date = as.Date(date, "%m/%d/%Y")) %>%
-  rename(price = `dollars per barrel`) %>%
+  rename(oil_price = `dollars per barrel`) %>%
   filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
 ff_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.CSV") %>%
   rename(Mkt_RF = `Mkt-RF`) %>%
@@ -45,8 +45,9 @@ twitter_summary <- twitter_summary %>%
 oil_price_monthly_summary <- oil_price_df %>%
   mutate(yr_mon = format(date, "%Y-%m"), yr = format(date, "%Y"), .after = date) %>%
   group_by(yr_mon) %>%
-  summarise(date, across(price, c(mean = mean, sd = sd))) %>%
-  filter(date == min(date))
+  summarise(date, across(oil_price, c(mean = mean, sd = sd))) %>%
+  filter(date == min(date)) %>%
+  select(-date)
 
 # Extract MKT-RF from ff data and summarize
 ff_summary <- ff_data %>%
@@ -57,11 +58,14 @@ ff_summary <- ff_data %>%
 
 # Join summaries with twitter and market data
 twitter_clean_summary <- full_join(clean_monthly_summary, twitter_summary) %>%
-  full_join(ff_summary)
+  full_join(ff_summary) %>%
+  full_join(oil_price_monthly_summary)
 twitter_oil_gas_summary <- full_join(oil_gas_monthly_summary, twitter_summary) %>%
-  full_join(ff_summary)
+  full_join(ff_summary) %>%
+  full_join(oil_price_monthly_summary)
 twitter_gmb_summary <- full_join(gmb_monthly_summary, twitter_summary) %>%
-  full_join(ff_summary)
+  full_join(ff_summary) %>%
+  full_join(oil_price_monthly_summary)
 
 # Delete unused dataframes
 rm(ff_data,
@@ -78,13 +82,29 @@ cor(twitter_clean_summary$daily_raw_return_sd, twitter_clean_summary$monthly_cou
 cor(twitter_oil_gas_summary$daily_raw_return_sd, twitter_oil_gas_summary$monthly_count)
 cor(twitter_gmb_summary$daily_raw_return_sd, twitter_gmb_summary$monthly_count)
 
-# Significant even when we take into account price
-clean_model <- lm(daily_raw_return_sd ~ monthly_count, data = twitter_clean_summary)
-oil_gas_model <- lm(price_mean ~  monthly_count, data = twitter_oil_gas_summary)
-gmb_model <- lm(daily_raw_return_sd ~ price_mean + monthly_count, data = twitter_gmb_summary)
-tidy(clean_model)
-tidy(oil_gas_model)
-tidy(gmb_model)
+# Create multiple linear regression model
+clean_price_model <- lm(price_mean ~  monthly_count + log(oil_price_mean), data = twitter_clean_summary)
+oil_gas_price_model <- lm(price_mean ~  monthly_count + log(oil_price_mean), data = twitter_oil_gas_summary)
+gmb_price_model <- lm(price_mean ~  monthly_count + log(oil_price_mean), data = twitter_gmb_summary)
+tidy(clean_price_model)
+tidy(oil_gas_price_model)
+tidy(gmb_price_model)
+
+# Return
+clean_return_model <- lm(daily_raw_return_mean ~  monthly_count + log(oil_price_mean), data = twitter_clean_summary)
+oil_gas_return_model <- lm(daily_raw_return_mean ~  monthly_count + log(oil_price_mean), data = twitter_oil_gas_summary)
+gmb_return_model <- lm(daily_raw_return_mean ~  monthly_count + log(oil_price_mean), data = twitter_gmb_summary)
+tidy(clean_return_model)
+tidy(oil_gas_return_model)
+tidy(gmb_return_model)
+
+# Return standard deviation
+clean_return_sd_model <- lm(daily_raw_return_sd ~  monthly_count + log(oil_price_mean), data = twitter_clean_summary)
+oil_gas_return_sd_model <- lm(daily_raw_return_sd ~  monthly_count + log(oil_price_mean), data = twitter_oil_gas_summary)
+gmb_return_sd_model <- lm(daily_raw_return_sd ~  monthly_count + log(oil_price_mean), data = twitter_gmb_summary)
+tidy(clean_return_sd_model)
+tidy(oil_gas_return_sd_model)
+tidy(gmb_return_sd_model)
 
 ggplot(twitter_gmb_summary, aes(x = date, y = month_count)) +
   geom_line() +
