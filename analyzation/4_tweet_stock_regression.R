@@ -55,7 +55,7 @@ ff_summary <- ff_data %>%
   summarise(date, yr_mon, across(Mkt_RF, c(mean = mean, sd = sd))) %>%
   filter(date == min(date))
 
-# Join summaries
+# Join summaries with twitter and market data
 twitter_clean_summary <- full_join(clean_monthly_summary, twitter_summary) %>%
   full_join(ff_summary)
 twitter_oil_gas_summary <- full_join(oil_gas_monthly_summary, twitter_summary) %>%
@@ -63,8 +63,16 @@ twitter_oil_gas_summary <- full_join(oil_gas_monthly_summary, twitter_summary) %
 twitter_gmb_summary <- full_join(gmb_monthly_summary, twitter_summary) %>%
   full_join(ff_summary)
 
-rm()
+# Delete unused dataframes
+rm(ff_data,
+   ff_summary,
+   gmb_monthly_summary,
+   clean_monthly_summary,
+   oil_gas_monthly_summary,
+   oil_price_df,
+   twitter_df)
 
+###################################################################
 
 cor(twitter_clean_summary$daily_raw_return_sd, twitter_clean_summary$monthly_count)
 cor(twitter_oil_gas_summary$daily_raw_return_sd, twitter_oil_gas_summary$monthly_count)
