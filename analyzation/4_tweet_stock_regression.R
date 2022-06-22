@@ -39,7 +39,7 @@ twitter_summary <- twitter_summary %>%
   group_by(yr_mon) %>%
   summarize(across(sentiment, list(mean = ~ mean(.x, na.rm = TRUE), sd = ~ sd(.x, na.rm = TRUE))), monthly_count) %>%
   ungroup() %>%
-  distinct() %>%
+  distinct()
   
 
 # Summarize monthly oil_price
@@ -81,9 +81,9 @@ rm(ff_data,
 
 
 # Create multiple linear regression model
-clean_price_model <- lm(price_mean ~  monthly_count + log(oil_price_mean), data = twitter_clean_summary)
-oil_gas_price_model <- lm(price_mean ~  monthly_count + log(oil_price_mean), data = twitter_oil_gas_summary)
-bmg_price_model <- lm(price_mean ~  monthly_count + log(oil_price_mean), data = twitter_bmg_summary)
+clean_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean), data = twitter_clean_summary)
+oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean), data = twitter_oil_gas_summary)
+bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean), data = twitter_bmg_summary)
 tidy(clean_price_model)
 tidy(oil_gas_price_model)
 tidy(bmg_price_model)
