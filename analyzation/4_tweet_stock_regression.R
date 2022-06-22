@@ -58,9 +58,9 @@ ff_summary <- ff_data %>%
 # Join summaries
 twitter_clean_summary <- full_join(clean_monthly_summary, twitter_summary) %>%
   full_join(ff_summary)
-twitter_oil_gas_summary <- full_join(oil_gas_monthly_summary, twitter_summary, ff_summary) %>%
+twitter_oil_gas_summary <- full_join(oil_gas_monthly_summary, twitter_summary) %>%
   full_join(ff_summary)
-twitter_gmb_summary <- full_join(gmb_monthly_summary, twitter_summary, ff_summary) %>%
+twitter_gmb_summary <- full_join(gmb_monthly_summary, twitter_summary) %>%
   full_join(ff_summary)
 
 rm()
