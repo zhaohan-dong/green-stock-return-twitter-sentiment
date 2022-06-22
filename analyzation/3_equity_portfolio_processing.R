@@ -154,27 +154,27 @@ oil_gas_stock <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
   cleanse_stock_data() %>%
   mutate(category = "oil-gas")
 
-# utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
-#   cleanse_stock_data() %>%
-#   mutate(category = "utility")
+utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
+  cleanse_stock_data() %>%
+  mutate(category = "utility")
 
 # Create equal weight portfolio and calculate daily raw return
 # Deleting individual stock ticker data
-# clean_stock_equal_weight <- equal_weight_portfolio(clean_stock) %>%
-#   daily_raw_return() %>%
-#   monthly_raw_return() %>%
-#   select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
-#   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
-# oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock) %>%
-#   daily_raw_return() %>%
-#   monthly_raw_return() %>%
-#   select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
-#   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
-# utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
-#   daily_raw_return() %>%
-#   monthly_raw_return() %>%
-#   select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
-#   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
+clean_stock_equal_weight <- equal_weight_portfolio(clean_stock) %>%
+  daily_raw_return() %>%
+  monthly_raw_return() %>%
+  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
+  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
+oil_gas_stock_equal_weight <- equal_weight_portfolio(oil_gas_stock) %>%
+  daily_raw_return() %>%
+  monthly_raw_return() %>%
+  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
+  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
+utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
+  daily_raw_return() %>%
+  monthly_raw_return() %>%
+  select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
+  filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 
 clean_long <- clean_stock %>%
   filter(data_field == "PX_LAST") %>%
@@ -202,28 +202,30 @@ gmb_return <- gmb_portfolio %>%
   select(date, yr_mon, yr, price, daily_raw_return, monthly_raw_return) %>%
   filter(date != as.Date("2012-03-30"))
 
-ggplot(gmb_return, aes(x=date, y=daily_raw_return)) +
-  geom_line() +
-  geom_point()
+clean_monthly_summary <- clean_stock_equal_weight %>%
+  group_by(yr_mon) %>%
+  summarise(date, across(c(price, daily_raw_return), c(mean = mean, sd = sd))) %>%
+  filter(date == min(date))
+
+oil_gas_monthly_summary <- oil_gas_stock_equal_weight %>%
+  group_by(yr_mon) %>%
+  summarise(date, across(c(price, daily_raw_return), c(mean = mean, sd = sd))) %>%
+  filter(date == min(date))
 
 gmb_monthly_summary <- gmb_return %>% 
   group_by(yr_mon) %>%
-  summarise(date, across(daily_raw_return, c(mean = mean, sd = sd))) %>%
+  summarise(date, across(c(price, daily_raw_return), c(mean = mean, sd = sd))) %>%
   filter(date == min(date))
 
-# Save gmb portfolio to CSV
+# Save monthly summary to CSV
+write_csv(clean_monthly_summary, "data/clean_monthly_summary.csv")
+write_csv(oil_gas_monthly_summary, "data/oil_gas_monthly_summary.csv")
 write_csv(gmb_monthly_summary, "data/gmb_monthly_summary.csv")
 
 ## raw return std dev is significantly related to date!
 test_model <- lm(daily_raw_return_sd ~ date, gmb_monthly_summary)
-
 tidy(test_model)
 
-ggplot(gmb_return, aes(x=date, y=monthly_raw_return)) +
-  geom_line() +
-  geom_point()
-
-test <- volume(clean_stock)
 
 # # Combine fama-french factors and calculate risk-free excess return
 # clean_stock_equal_weight <- combine_ff_model(clean_stock_equal_weight)
