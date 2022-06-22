@@ -176,24 +176,24 @@ utility_stock_equal_weight <- equal_weight_portfolio(utility_stock) %>%
   select(date, yr_mon, category, price, daily_raw_return, monthly_raw_return) %>%
   filter(date != as.Date("2012-03-30")) # Delete head of data with no return info
 
-clean_long <- clean_stock %>%
+clean_short <- clean_stock %>%
   filter(data_field == "PX_LAST") %>%
+  mutate(value = -value) %>% # Short green stocks
   pivot_wider(names_from = ticker, values_from = value) %>%
   select(-data_field, -category) %>%
   na.locf()
 
-oil_gas_short <- oil_gas_stock %>%
+oil_gas_long <- oil_gas_stock %>%
   filter(data_field == "PX_LAST") %>%
-  mutate(value = -value) %>% # Short oil and gas stocks
   pivot_wider(names_from = ticker, values_from = value) %>%
   select(-data_field, -category) %>%
   na.locf()
 
 # Green minus brown long-short
-gmb_portfolio <- merge(clean_long, oil_gas_short) %>%
+bmg_portfolio <- merge(clean_short, oil_gas_long) %>%
   mutate(price = rowSums(select(., !date)), .after = date)
 
-gmb_return <- gmb_portfolio %>%
+bmg_return <- bmg_portfolio %>%
   mutate(yr_mon = format(date, "%Y-%m"), yr = format(date, "%Y"), .after = date) %>%
   daily_raw_return() %>%
   monthly_raw_return() %>%
@@ -212,7 +212,7 @@ oil_gas_monthly_summary <- oil_gas_stock_equal_weight %>%
   summarise(date, across(c(price, daily_raw_return), c(mean = mean, sd = sd))) %>%
   filter(date == min(date))
 
-gmb_monthly_summary <- gmb_return %>% 
+bmg_monthly_summary <- bmg_return %>% 
   group_by(yr_mon) %>%
   summarise(date, across(c(price, daily_raw_return), c(mean = mean, sd = sd))) %>%
   filter(date == min(date))
@@ -220,10 +220,10 @@ gmb_monthly_summary <- gmb_return %>%
 # Save monthly summary to CSV
 write_csv(clean_monthly_summary, "data/clean_monthly_summary.csv")
 write_csv(oil_gas_monthly_summary, "data/oil_gas_monthly_summary.csv")
-write_csv(gmb_monthly_summary, "data/gmb_monthly_summary.csv")
+write_csv(bmg_monthly_summary, "data/bmg_monthly_summary.csv")
 
 ## raw return std dev is significantly related to date!
-test_model <- lm(daily_raw_return_sd ~ date, gmb_monthly_summary)
+test_model <- lm(daily_raw_return_sd ~ date, bmg_monthly_summary)
 tidy(test_model)
 
 
