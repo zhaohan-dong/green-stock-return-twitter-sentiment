@@ -111,20 +111,20 @@ summary(bmg_price_model)
 # Need to calculate oil price fluctuation and tweet count fluctuation!!!!!!!!!!!
 
 # Return
-clean_return_model <- lm(daily_raw_return_mean ~  count_change_perc + oil_price_change_perc + Mkt_RF, data = twitter_clean_summary)
-oil_gas_return_model <- lm(daily_raw_return_mean ~  count_change_perc + oil_price_change_perc + Mkt_RF, data = twitter_oil_gas_summary)
-bmg_return_model <- lm(daily_raw_return_mean ~  monthly_count + oil_price_change_perc + Mkt_RF, data = twitter_bmg_summary)
+clean_return_model <- lm(daily_raw_return_mean ~  oil_price_change_perc + Mkt_RF, data = twitter_clean_summary)
+oil_gas_return_model <- lm(daily_raw_return_mean ~  oil_price_change_perc + Mkt_RF, data = twitter_oil_gas_summary)
+bmg_return_model <- lm(daily_raw_return_mean ~  oil_price_change_perc + Mkt_RF, data = twitter_bmg_summary)
 summary(clean_return_model)
 summary(oil_gas_return_model)
 summary(bmg_return_model)
 
 # Return standard deviation
-clean_return_sd_model <- lm(daily_raw_return_sd ~  log(count_change_perc) + log(oil_price_mean), data = twitter_clean_summary)
-oil_gas_return_sd_model <- lm(daily_raw_return_sd ~  log(count_change_perc) + log(oil_price_mean), data = twitter_oil_gas_summary)
-bmg_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_mean), data = twitter_bmg_summary)
-tidy(clean_return_sd_model)
-tidy(oil_gas_return_sd_model)
-tidy(bmg_return_sd_model)
+clean_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_change_perc), data = twitter_clean_summary)
+oil_gas_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_change_perc), data = twitter_oil_gas_summary)
+bmg_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_change_perc), data = twitter_bmg_summary)
+summary(clean_return_sd_model)
+summary(oil_gas_return_sd_model)
+summary(bmg_return_sd_model)
 
 ggplot(twitter_bmg_summary, aes(x = date, y = log(monthly_count))) +
   geom_line() +
