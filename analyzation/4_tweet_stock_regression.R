@@ -1,4 +1,4 @@
-## Regression between tweets and stock
+## Regression between tweets and stock price
 
 require(tidyquant, quietly = TRUE)
 require(broom, quietly = TRUE)
@@ -102,13 +102,13 @@ rm(ff_data,
 ###################################################################
 
 # Create multiple linear regression model
-clean_price_model <- lm((price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_clean_summary)
+clean_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean), data = twitter_clean_summary)
 summary(clean_price_model)
 autoplot(clean_price_model)
-oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_oil_gas_summary)
+oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean), data = twitter_oil_gas_summary)
 summary(oil_gas_price_model)
 autoplot(oil_gas_price_model)
-bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_bmg_summary)
+bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean), data = twitter_bmg_summary)
 summary(bmg_price_model)
 autoplot(bmg_price_model)
 
