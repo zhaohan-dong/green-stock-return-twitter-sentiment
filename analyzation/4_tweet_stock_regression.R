@@ -18,7 +18,7 @@ wx_df <- read_csv("data/KNYC_monthly_summary_processed.csv") %>%
 oil_price_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv") %>%
   mutate(date = as.Date(date, "%m/%d/%Y")) %>%
   rename(oil_price = `dollars per barrel`) %>%
-  filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
+  filter(date >= as.Date("2012-03-30") & date < as.Date("2018-05-01"))
 ff_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.CSV") %>%
   rename(Mkt_RF = `Mkt-RF`) %>%
   mutate(date = as.Date(as.character(date), format = "%Y%m%d")) %>%
@@ -43,9 +43,8 @@ twitter_summary <- twitter_summary %>%
   summarize(across(sentiment, list(mean = ~ mean(.x, na.rm = TRUE), sd = ~ sd(.x, na.rm = TRUE))), monthly_count) %>%
   ungroup() %>%
   distinct() %>%
-  mutate(lag1_count = lag(monthly_count, k = 1),
+  mutate(lag1_count = lag(monthly_count, n = 1),
          count_change_perc = monthly_count / lag1_count - 1) %>%
-  select(-lag1_count) %>%
   filter(yr_mon != "2012-03")
 
 
@@ -55,6 +54,11 @@ oil_price_monthly_summary <- oil_price_df %>%
   group_by(yr_mon) %>%
   summarise(date, across(oil_price, c(mean = mean, sd = sd))) %>%
   filter(date == min(date)) %>%
+  ungroup()
+oil_price_monthly_summary <- oil_price_monthly_summary %>%
+  mutate(lag1_oil_price_mean = lag(oil_price_mean, n = 1),
+         oil_price_change_perc = oil_price_mean / lag1_oil_price_mean - 1) %>%
+  filter(yr_mon != "2012-03") %>%
   select(-date)
 
 # Extract MKT-RF from ff data and summarize
@@ -99,24 +103,23 @@ rm(ff_data,
 
 ###################################################################
 
-
 # Create multiple linear regression model
-clean_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_clean_summary)
-oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_oil_gas_summary)
-bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_bmg_summary)
-tidy(clean_price_model)
-tidy(oil_gas_price_model)
-tidy(bmg_price_model)
+clean_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_clean_summary)
+oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_oil_gas_summary)
+bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_bmg_summary)
+summary(clean_price_model)
+summary(oil_gas_price_model)
+summary(bmg_price_model)
 
 # Need to calculate oil price fluctuation and tweet count fluctuation!!!!!!!!!!!
 
 # Return
-clean_return_model <- lm(daily_raw_return_mean ~  log(count_change_perc) + log(oil_price_mean), data = twitter_clean_summary)
-oil_gas_return_model <- lm(daily_raw_return_mean ~  log(count_change_perc) + log(oil_price_mean) + Mkt_RF_mean, data = twitter_oil_gas_summary)
-bmg_return_model <- lm(daily_raw_return_mean ~  log(count_change_perc) + log(oil_price_mean) + Mkt_RF_mean, data = twitter_bmg_summary)
-tidy(clean_return_model)
-tidy(oil_gas_return_model)
-tidy(bmg_return_model)
+clean_return_model <- lm(daily_raw_return_mean ~  count_change_perc + oil_price_change_perc + Mkt_RF_mean, data = twitter_clean_summary)
+oil_gas_return_model <- lm(daily_raw_return_mean ~  count_change_perc + oil_price_change_perc + Mkt_RF_mean, data = twitter_oil_gas_summary)
+bmg_return_model <- lm(daily_raw_return_mean ~  monthly_count + oil_price_change_perc + Mkt_RF_mean, data = twitter_bmg_summary)
+summary(clean_return_model)
+summary(oil_gas_return_model)
+summary(bmg_return_model)
 
 # Return standard deviation
 clean_return_sd_model <- lm(daily_raw_return_sd ~  log(count_change_perc) + log(oil_price_mean), data = twitter_clean_summary)
