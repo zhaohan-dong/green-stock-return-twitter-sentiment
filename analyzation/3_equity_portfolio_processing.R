@@ -114,6 +114,12 @@ utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
   cleanse_stock_data() %>%
   filter(data_field == "PX_LAST")
 
+spx <- read_csv("data/spx.csv") %>%
+  mutate(date = as.Date(date, "%m/%d/%Y")) %>%
+  select(-volume) %>%
+  tq_transmute(price, mutate_fun = periodReturn, period = "monthly", col_rename = "mkt_return") %>%
+  filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
+
 # Create equal weight portfolio and calculate daily raw return
 # Deleting individual stock ticker data
 clean_stock_monthly_return <- clean_stock %>%
@@ -136,12 +142,7 @@ utility_stock_monthly_return <- utility_stock %>%
 gmb_monthly_return <- full_join(clean_stock_monthly_return, oil_gas_stock_monthly_return) %>%
   mutate(oil_gas_return = -oil_gas_return) %>%
   pivot_longer(cols = c(clean_return, oil_gas_return)) %>%
-  tq_portfolio(assets_col = name, returns_col = value, weights = c(23 / 75, 52 / 75))
-
-write_csv(clean_stock_monthly_return, "data/clean_stock_monthly_return.csv")
-write_csv(oil_gas_stock_monthly_return, "data/oil_gas_stock_monthly_return.csv")
-write_csv(utility_stock_monthly_return, "data/utility_stock_monthly_return.csv")
-write_csv(gmb_monthly_return, "data/gmb_monthly_return.csv")
+  tq_portfolio(assets_col = name, returns_col = value, weights = c(23 / 75, 52 / 75), col_rename = "gmb_return")
 
 # Volume
 clean_stock_vol <- read_csv("data/equity/clean_selected.csv") %>%
@@ -152,7 +153,7 @@ clean_stock_vol <- read_csv("data/equity/clean_selected.csv") %>%
             yr_mon = format(date, "%Y-%m")) %>%
   group_by(yr_mon) %>%
   transmute(date = max(date),
-            total_volume = sum(total_volume)) %>%
+            clean_volume = sum(total_volume)) %>%
   ungroup() %>%
   select(-yr_mon) %>%
   unique() %>%
@@ -166,7 +167,7 @@ oil_gas_stock_vol <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
             yr_mon = format(date, "%Y-%m")) %>%
   group_by(yr_mon) %>%
   transmute(date = max(date),
-            total_volume = sum(total_volume)) %>%
+            oil_gas_volume = sum(total_volume)) %>%
   ungroup() %>%
   select(-yr_mon) %>%
   unique() %>%
@@ -180,15 +181,21 @@ utility_stock_vol <- read_csv("data/equity/utility_selected.csv") %>%
             yr_mon = format(date, "%Y-%m")) %>%
   group_by(yr_mon) %>%
   transmute(date = max(date),
-            total_volume = sum(total_volume)) %>%
+            utility_volume = sum(total_volume)) %>%
   ungroup() %>%
   select(-yr_mon) %>%
   unique() %>%
   filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
 
-write_csv(clean_stock_vol, "data/clean_stock_vol.csv")
-write_csv(oil_gas_stock_vol, "data/oil_gas_stock_vol.csv")
-write_csv(utility_stock_vol, "data/utility_stock_vol.csv")
+output_df <- merge(clean_stock_monthly_return, oil_gas_stock_monthly_return) %>%
+  merge(utility_stock_monthly_return) %>%
+  merge(gmb_monthly_return) %>%
+  merge(clean_stock_vol) %>%
+  merge(oil_gas_stock_vol) %>%
+  merge(utility_stock_vol) %>%
+  merge(spx)
+
+write_csv(output_df, "data/stock_monthly_data.csv")
 
 ## raw return std dev is significantly related to date!
 test_model <- lm(daily_raw_return_sd ~ date, bmg_monthly_summary)
