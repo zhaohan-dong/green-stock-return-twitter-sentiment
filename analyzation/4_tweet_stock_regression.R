@@ -19,9 +19,9 @@ oil_price_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv") %>%
   mutate(date = as.Date(date, "%m/%d/%Y")) %>%
   rename(oil_price = `dollars per barrel`) %>%
   filter(date >= as.Date("2012-03-30") & date < as.Date("2018-05-01"))
-ff_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.CSV") %>%
+ff_data <- read_csv("data/equity/F-F_Research_Data_Factors_monthly.CSV") %>%
   rename(Mkt_RF = `Mkt-RF`) %>%
-  mutate(date = as.Date(as.character(date), format = "%Y%m%d")) %>%
+  mutate(date = as.Date(paste0(as.character(date), "01"), format = "%Y%m%d")) %>%
   filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
 spx_data <- read_csv("data/SPX.csv") %>%
   mutate(date = as.Date(date, format = "%m/%d/%Y")) %>%
@@ -62,11 +62,9 @@ oil_price_monthly_summary <- oil_price_monthly_summary %>%
   select(-date)
 
 # Extract MKT-RF from ff data and summarize
-ff_summary <- ff_data %>%
-  mutate(yr_mon = format(date, "%Y-%m"), yr = format(date, "%Y"), .after = date) %>%
-  group_by(yr_mon) %>%
-  summarise(date, yr_mon, across(Mkt_RF, c(mean = mean, sd = sd))) %>%
-  filter(date == min(date))
+ff_data <- ff_data %>%
+  mutate(yr_mon = format(date, "%Y-%m"), .after = date) %>%
+  select(-date)
 
 # Get only spx price monthly average
 spx_monthly <- spx_data %>%
@@ -80,15 +78,15 @@ spx_monthly <- spx_data %>%
 
 # Join summaries with twitter and market data
 twitter_clean_summary <- full_join(clean_monthly_summary, twitter_summary) %>%
-  full_join(ff_summary) %>%
+  full_join(ff_data) %>%
   full_join(oil_price_monthly_summary) %>%
   full_join(spx_monthly)
 twitter_oil_gas_summary <- full_join(oil_gas_monthly_summary, twitter_summary) %>%
-  full_join(ff_summary) %>%
+  full_join(ff_data) %>%
   full_join(oil_price_monthly_summary)  %>%
   full_join(spx_monthly)
 twitter_bmg_summary <- full_join(bmg_monthly_summary, twitter_summary) %>%
-  full_join(ff_summary) %>%
+  full_join(ff_data) %>%
   full_join(oil_price_monthly_summary)  %>%
   full_join(spx_monthly)
 
