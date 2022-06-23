@@ -71,8 +71,10 @@ ff_data <- ff_data %>%
 spx_monthly <- spx_data %>%
   select(date, spx_price) %>%
   mutate(yr_mon = format(date, "%Y-%m"), yr = format(date, "%Y"), .after = date) %>%
+  mutate(lag1_spx_price = lag(spx_price, n = 1L),
+         spx_price_return = spx_price / lag1_spx_price - 1) %>%
   group_by(yr_mon) %>%
-  summarise(date, yr_mon, across(spx_price, c(mean = mean, sd = sd))) %>%
+  summarise(date, yr_mon, across(c(spx_price, spx_price_return), c(mean = mean, sd = sd))) %>%
   filter(date == min(date)) %>%
   filter(yr_mon != "2012-03" & yr_mon != "2018-05") %>%
   select(-date)
@@ -124,16 +126,17 @@ summary(clean_return_model)
 summary(oil_gas_return_model)
 summary(bmg_return_model)
 
-# Return standard deviation, the more people tweets, the more return sd it is
-clean_return_sd_model <- lm(sqrt(daily_raw_return_sd) ~  log(monthly_count) + sqrt(oil_price_sd) + sqrt(spx_price_sd), data = twitter_clean_summary)
-summary(clean_return_sd_model)
-autoplot(clean_return_sd_model)
-oil_gas_return_sd_model <- lm(sqrt(daily_raw_return_sd) ~ log(monthly_count) + sqrt(oil_price_sd) + sqrt(spx_price_sd), data = twitter_oil_gas_summary)
-summary(oil_gas_return_sd_model)
-autoplot(oil_gas_return_sd_model)
-bmg_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_sd), data = twitter_bmg_summary)
-summary(bmg_return_sd_model)
-autoplot(bmg_return_sd_model)
+# # Can't do these
+# # Return standard deviation, the more people tweets, the more return sd it is
+# clean_return_sd_model <- lm(sqrt(daily_raw_return_sd) ~  log(monthly_count) + sqrt(oil_price_sd) + sqrt(spx_price_sd), data = twitter_clean_summary)
+# summary(clean_return_sd_model)
+# autoplot(clean_return_sd_model)
+# oil_gas_return_sd_model <- lm(sqrt(daily_raw_return_sd) ~ log(monthly_count) + sqrt(oil_price_sd) + sqrt(spx_price_return_sd), data = twitter_oil_gas_summary)
+# summary(oil_gas_return_sd_model)
+# autoplot(oil_gas_return_sd_model)
+# bmg_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_sd), data = twitter_bmg_summary)
+# summary(bmg_return_sd_model)
+# autoplot(bmg_return_sd_model)
 
 ggplot(twitter_bmg_summary, aes(x = date, y = log(monthly_count))) +
   geom_line() +
