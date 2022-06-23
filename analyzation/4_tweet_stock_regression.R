@@ -23,13 +23,16 @@ ff_data <- read_csv("data/equity/F-F_Research_Data_Factors_daily.CSV") %>%
   rename(Mkt_RF = `Mkt-RF`) %>%
   mutate(date = as.Date(as.character(date), format = "%Y%m%d")) %>%
   filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
+spx_data <- read_csv("data/SPX.csv") %>%
+  mutate(date = as.Date(date, format = "%m/%d/%Y")) %>%
+  rename(spx_price = price)
 
 # Removing tweet data not contingent for research
 twitter_df <- twitter_df %>%
   mutate(date = as.Date(created_at), .after = created_at) %>%
   select(-created_at) %>%
   select(date, status_id, retweet_count, quote_count, reply_count, sentiment) %>%
-  filter(date >= as.Date("2012-04-01"))
+  filter(date >= as.Date("2012-03-01"))
 
 # Construct summary of twitter mean and standard dev, as well as tweet No. per month
 twitter_summary <- twitter_df %>%
@@ -39,8 +42,12 @@ twitter_summary <- twitter_summary %>%
   group_by(yr_mon) %>%
   summarize(across(sentiment, list(mean = ~ mean(.x, na.rm = TRUE), sd = ~ sd(.x, na.rm = TRUE))), monthly_count) %>%
   ungroup() %>%
-  distinct()
-  
+  distinct() %>%
+  mutate(lag1_count = lag(monthly_count, k = 1),
+         count_change_perc = monthly_count / lag1_count - 1) %>%
+  select(-lag1_count) %>%
+  filter(yr_mon != "2012-03")
+
 
 # Summarize monthly oil_price
 oil_price_monthly_summary <- oil_price_df %>%
@@ -57,16 +64,29 @@ ff_summary <- ff_data %>%
   summarise(date, yr_mon, across(Mkt_RF, c(mean = mean, sd = sd))) %>%
   filter(date == min(date))
 
+# Get only spx price monthly average
+spx_monthly <- spx_data %>%
+  select(date, spx_price) %>%
+  mutate(yr_mon = format(date, "%Y-%m"), yr = format(date, "%Y"), .after = date) %>%
+  group_by(yr_mon) %>%
+  summarise(date, yr_mon, across(spx_price, c(mean = mean, sd = sd))) %>%
+  filter(date == min(date)) %>%
+  filter(yr_mon != "2012-03" & yr_mon != "2018-05") %>%
+  select(-date)
+
 # Join summaries with twitter and market data
 twitter_clean_summary <- full_join(clean_monthly_summary, twitter_summary) %>%
   full_join(ff_summary) %>%
-  full_join(oil_price_monthly_summary)
+  full_join(oil_price_monthly_summary) %>%
+  full_join(spx_monthly)
 twitter_oil_gas_summary <- full_join(oil_gas_monthly_summary, twitter_summary) %>%
   full_join(ff_summary) %>%
-  full_join(oil_price_monthly_summary)
+  full_join(oil_price_monthly_summary)  %>%
+  full_join(spx_monthly)
 twitter_bmg_summary <- full_join(bmg_monthly_summary, twitter_summary) %>%
   full_join(ff_summary) %>%
-  full_join(oil_price_monthly_summary)
+  full_join(oil_price_monthly_summary)  %>%
+  full_join(spx_monthly)
 
 # Delete unused dataframes
 rm(ff_data,
@@ -81,9 +101,9 @@ rm(ff_data,
 
 
 # Create multiple linear regression model
-clean_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean), data = twitter_clean_summary)
-oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean), data = twitter_oil_gas_summary)
-bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean), data = twitter_bmg_summary)
+clean_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_clean_summary)
+oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_oil_gas_summary)
+bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_bmg_summary)
 tidy(clean_price_model)
 tidy(oil_gas_price_model)
 tidy(bmg_price_model)
@@ -91,16 +111,16 @@ tidy(bmg_price_model)
 # Need to calculate oil price fluctuation and tweet count fluctuation!!!!!!!!!!!
 
 # Return
-clean_return_model <- lm(daily_raw_return_mean ~  log(monthly_count) + log(oil_price_mean), data = twitter_clean_summary)
-oil_gas_return_model <- lm(daily_raw_return_mean ~  log(monthly_count) + log(oil_price_mean) + Mkt_RF_mean, data = twitter_oil_gas_summary)
-bmg_return_model <- lm(daily_raw_return_mean ~  log(monthly_count) + log(oil_price_mean) + Mkt_RF_mean, data = twitter_bmg_summary)
+clean_return_model <- lm(daily_raw_return_mean ~  log(count_change_perc) + log(oil_price_mean), data = twitter_clean_summary)
+oil_gas_return_model <- lm(daily_raw_return_mean ~  log(count_change_perc) + log(oil_price_mean) + Mkt_RF_mean, data = twitter_oil_gas_summary)
+bmg_return_model <- lm(daily_raw_return_mean ~  log(count_change_perc) + log(oil_price_mean) + Mkt_RF_mean, data = twitter_bmg_summary)
 tidy(clean_return_model)
 tidy(oil_gas_return_model)
 tidy(bmg_return_model)
 
 # Return standard deviation
-clean_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_mean), data = twitter_clean_summary)
-oil_gas_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_mean), data = twitter_oil_gas_summary)
+clean_return_sd_model <- lm(daily_raw_return_sd ~  log(count_change_perc) + log(oil_price_mean), data = twitter_clean_summary)
+oil_gas_return_sd_model <- lm(daily_raw_return_sd ~  log(count_change_perc) + log(oil_price_mean), data = twitter_oil_gas_summary)
 bmg_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_mean), data = twitter_bmg_summary)
 tidy(clean_return_sd_model)
 tidy(oil_gas_return_sd_model)
