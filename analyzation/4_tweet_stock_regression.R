@@ -4,6 +4,7 @@ require(tidyquant, quietly = TRUE)
 require(broom, quietly = TRUE)
 require(tidyverse, quietly = TRUE)
 require(rtweet, quietly = TRUE)
+require(ggfortify, quietly = TRUE)
 
 # Load data and convert date column from character to date type
 twitter_df <- read_twitter_csv("data/tweet_sentiment.csv")
@@ -101,12 +102,19 @@ rm(ff_data,
 ###################################################################
 
 # Create multiple linear regression model
-clean_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_clean_summary)
-oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_oil_gas_summary)
-bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_bmg_summary)
+clean_price_model <- lm((price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_clean_summary)
 summary(clean_price_model)
+autoplot(clean_price_model)
+oil_gas_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_oil_gas_summary)
 summary(oil_gas_price_model)
+autoplot(oil_gas_price_model)
+bmg_price_model <- lm(log(price_mean) ~  log(monthly_count) + log(lag1_count) + log(oil_price_mean) + log(spx_monthly$spx_price_mean), data = twitter_bmg_summary)
 summary(bmg_price_model)
+autoplot(bmg_price_model)
+
+ggplot(twitter_clean_summary, aes(x = log(price_mean), y = log(monthly_count))) +
+  geom_point()
+
 
 # Need to calculate oil price fluctuation and tweet count fluctuation!!!!!!!!!!!
 
@@ -119,9 +127,9 @@ summary(oil_gas_return_model)
 summary(bmg_return_model)
 
 # Return standard deviation
-clean_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_change_perc), data = twitter_clean_summary)
-oil_gas_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_change_perc), data = twitter_oil_gas_summary)
-bmg_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_change_perc), data = twitter_bmg_summary)
+clean_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_sd), data = twitter_clean_summary)
+oil_gas_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_sd), data = twitter_oil_gas_summary)
+bmg_return_sd_model <- lm(daily_raw_return_sd ~  log(monthly_count) + log(oil_price_sd), data = twitter_bmg_summary)
 summary(clean_return_sd_model)
 summary(oil_gas_return_sd_model)
 summary(bmg_return_sd_model)
