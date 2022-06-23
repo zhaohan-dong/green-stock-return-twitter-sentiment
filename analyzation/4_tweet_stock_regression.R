@@ -92,7 +92,6 @@ twitter_bmg_summary <- full_join(bmg_monthly_summary, twitter_summary) %>%
 
 # Delete unused dataframes
 rm(ff_data,
-   ff_summary,
    bmg_monthly_summary,
    clean_monthly_summary,
    oil_gas_monthly_summary,
@@ -112,9 +111,9 @@ summary(bmg_price_model)
 # Need to calculate oil price fluctuation and tweet count fluctuation!!!!!!!!!!!
 
 # Return
-clean_return_model <- lm(daily_raw_return_mean ~  count_change_perc + oil_price_change_perc + Mkt_RF_mean, data = twitter_clean_summary)
-oil_gas_return_model <- lm(daily_raw_return_mean ~  count_change_perc + oil_price_change_perc + Mkt_RF_mean, data = twitter_oil_gas_summary)
-bmg_return_model <- lm(daily_raw_return_mean ~  monthly_count + oil_price_change_perc + Mkt_RF_mean, data = twitter_bmg_summary)
+clean_return_model <- lm(daily_raw_return_mean ~  count_change_perc + oil_price_change_perc + Mkt_RF, data = twitter_clean_summary)
+oil_gas_return_model <- lm(daily_raw_return_mean ~  count_change_perc + oil_price_change_perc + Mkt_RF, data = twitter_oil_gas_summary)
+bmg_return_model <- lm(daily_raw_return_mean ~  monthly_count + oil_price_change_perc + Mkt_RF, data = twitter_bmg_summary)
 summary(clean_return_model)
 summary(oil_gas_return_model)
 summary(bmg_return_model)
