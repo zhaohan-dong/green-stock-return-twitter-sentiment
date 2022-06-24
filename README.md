@@ -6,4 +6,10 @@ It is divided into two parts:
 1. Data collection (/twitter_scraping directory)
 2. Data analyzation (/processing directory)
 
-Note: Files in /data are ignored by git due to file size limit, please back up the data to local directories or other services.
+Gitignore list:
+data/equity/
+data/1_Tweet_IDs.csv
+data/tweet.csv
+data/tweet.old
+data/tweet_sentiment.csv
+data/twitter_raw/
