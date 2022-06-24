@@ -133,7 +133,7 @@ utility_stock_monthly_return <- utility_stock %>%
 gmb_monthly_return <- full_join(clean_stock_monthly_return, oil_gas_stock_monthly_return) %>%
   mutate(oil_gas_return = -oil_gas_return) %>%
   pivot_longer(cols = c(clean_return, oil_gas_return)) %>%
-  tq_portfolio(assets_col = name, returns_col = value, weights = c(23 / 75, 52 / 75), col_rename = "gmb_return")
+  tq_portfolio(assets_col = name, returns_col = value, col_rename = "gmb_return")
 
 # Read volumes for portfolios
 clean_stock_vol <- read_csv("data/equity/clean_selected.csv") %>%
