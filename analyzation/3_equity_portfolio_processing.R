@@ -155,7 +155,7 @@ clean_stock_vol <- read_csv("data/equity/clean_selected.csv") %>%
   ungroup() %>%
   unique() %>% # Delete redundant entries per month
   # Calculate volume percentage change
-  tq_transmute(clean_volume, mutate_fun = periodReturn, period = "monthly",
+  tq_mutate(clean_volume, mutate_fun = periodReturn, period = "monthly",
                col_rename = "clean_stock_vol_change_perc")
 
 oil_gas_stock_vol <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
@@ -168,7 +168,7 @@ oil_gas_stock_vol <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
   ungroup() %>%
   unique() %>% # Delete redundant entries per month
   # Calculate volume percentage change
-  tq_transmute(oil_gas_volume, mutate_fun = periodReturn, period = "monthly",
+  tq_mutate(oil_gas_volume, mutate_fun = periodReturn, period = "monthly",
                col_rename = "oil_gas_stock_vol_change_perc")
 
 utility_stock_vol <- read_csv("data/equity/utility_selected.csv") %>%
@@ -181,7 +181,7 @@ utility_stock_vol <- read_csv("data/equity/utility_selected.csv") %>%
   ungroup() %>%
   unique() %>% # Delete redundant entries per month
   # Calculate volume percentage change
-  tq_transmute(utility_volume, mutate_fun = periodReturn, period = "monthly",
+  tq_mutate(utility_volume, mutate_fun = periodReturn, period = "monthly",
                col_rename = "utility_stock_vol_change_perc")
 
 # Initialize output dataframe
