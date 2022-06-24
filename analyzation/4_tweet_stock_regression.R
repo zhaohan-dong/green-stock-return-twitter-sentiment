@@ -17,16 +17,17 @@ autoplot(clean_return_model)
 cor(resid(clean_return_model), analysis_df$monthly_tweet_count)
 
 ## OG significantly explained by lag 1 monthly tweet count
-oil_gas_return_model <- lm(oil_gas_return - RF ~
-                             lag(monthly_tweet_count) + log(wti_spot_price) +
-                             Mkt_RF + SMB + HML,
+oil_gas_return_model <- lm(oil_gas_return - RF ~ 
+                             lag(monthly_tweet_count, n = 1) + log(wti_spot_price) +
+                             Mkt_RF + SMB + HML + ab_temp,
                            data = analysis_df)
 summary(oil_gas_return_model)
 vif(oil_gas_return_model)
 autoplot(oil_gas_return_model)
 
 utility_return_model <- lm(utility_return - RF ~
-                             lag(monthly_tweet_count) + log(wti_spot_price) + Mkt_RF,
+                             lag(monthly_tweet_count) + log(wti_spot_price) +
+                             Mkt_RF + SMB + HML,
                            data = analysis_df)
 summary(utility_return_model)
 vif(utility_return_model)
@@ -40,25 +41,29 @@ vif(gmb_return_model)
 autoplot(gmb_return_model)
 
 # Skewness tests for log fitting
-skewness(analysis_df$utility_return - analysis_df$RF)
-skewness(log(analysis_df$utility_return))
+skewness(analysis_df$ab_temp)
+skewness(log(analysis_df$ab_temp))
 skewness(log(1 + analysis_df$utility_return - analysis_df$RF))
 
 # Create multiple linear regression model for volume
-clean_volume_model <- lm(clean_volume ~
-                           monthly_tweet_count + wti_spot_price,
+clean_volume_model <- lm(log(clean_volume) ~
+                           lag(monthly_tweet_count) + log(wti_spot_price),
                          data = analysis_df)
 summary(clean_volume_model)
 autoplot(clean_volume_model)
 
-oil_gas_volume_model <- lm(oil_gas_volume ~
-                             lag(monthly_tweet_count) + wti_spot_price,
+oil_gas_volume_model <- lm(log(oil_gas_volume) ~
+                             lag(monthly_tweet_count) + log(wti_spot_price),
                            data = analysis_df)
 summary(oil_gas_volume_model)
 autoplot(oil_gas_volume_model)
 
-utility_volume_model <- lm(utility_volume ~
-                             monthly_tweet_count + wti_spot_price,
+utility_volume_model <- lm(log(utility_volume) ~
+                             lag(monthly_tweet_count) + log(wti_spot_price),
                            data = analysis_df)
 summary(utility_volume_model)
 autoplot(utility_volume_model)
+
+p <- ggplot(analysis_df)
+
+p + geom_point(aes(x = date, y = monthly_tweet_count))
