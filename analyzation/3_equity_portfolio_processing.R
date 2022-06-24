@@ -106,34 +106,43 @@ utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
 spx <- read_csv("data/equity/spx.csv") %>%
   mutate(date = as.Date(date, "%m/%d/%Y")) %>%
   select(-volume) %>%
-  tq_transmute(price, mutate_fun = periodReturn, period = "monthly", col_rename = "spx_return") %>%
+  tq_transmute(price, mutate_fun = periodReturn, period = "monthly",
+               col_rename = "spx_return") %>%
   mutate(date = floor_date(date, unit = "month"))
 
-# Create equal weight portfolio and calculate daily raw return
-# Deleting individual stock ticker data
+# Create equal weight portfolio and calculate monthly portfolio raw return
 clean_stock_monthly_return <- clean_stock %>%
   group_by(ticker) %>%
   tq_transmute(value, mutate_fun = periodReturn, period = "monthly") %>%
-  tq_portfolio(assets_col = ticker, returns_col = monthly.returns, col_rename = "clean_return") %>%
+  # Calculate portfolio return, change weight here for other weighting
+  tq_portfolio(assets_col = ticker, returns_col = monthly.returns,
+               col_rename = "clean_return") %>%
   mutate(date = floor_date(date, unit = "month"))
   
 oil_gas_stock_monthly_return <- oil_gas_stock %>%
   group_by(ticker) %>%
   tq_transmute(value, mutate_fun = periodReturn, period = "monthly") %>%
-  tq_portfolio(assets_col = ticker, returns_col = monthly.returns, col_rename = "oil_gas_return") %>%
+  # Calculate portfolio return, change weight here for other weighting
+  tq_portfolio(assets_col = ticker, returns_col = monthly.returns,
+               col_rename = "oil_gas_return") %>%
   mutate(date = floor_date(date, unit = "month"))
 
 utility_stock_monthly_return <- utility_stock %>%
   group_by(ticker) %>%
   tq_transmute(value, mutate_fun = periodReturn, period = "monthly") %>%
-  tq_portfolio(assets_col = ticker, returns_col = monthly.returns, col_rename = "utility_return") %>%
+  # Calculate portfolio return, change weight here for other weighting
+  tq_portfolio(assets_col = ticker, returns_col = monthly.returns,
+               col_rename = "utility_return") %>%
   mutate(date = floor_date(date, unit = "month"))
 
 # Create Green minus brown long-short equal weight portfolio
-gmb_monthly_return <- full_join(clean_stock_monthly_return, oil_gas_stock_monthly_return) %>%
+gmb_monthly_return <- clean_stock_monthly_return %>%
+  full_join(oil_gas_stock_monthly_return) %>%
   mutate(oil_gas_return = -oil_gas_return) %>%
   pivot_longer(cols = c(clean_return, oil_gas_return)) %>%
-  tq_portfolio(assets_col = name, returns_col = value, col_rename = "gmb_return")
+  # Calculate return, has 23 green stocks and 52 oil/gas stocks
+  tq_portfolio(assets_col = name, returns_col = value,
+               weights = c(23/75, 52/75), col_rename = "gmb_return")
 
 # Read volumes for portfolios
 clean_stock_vol <- read_csv("data/equity/clean_selected.csv") %>%
@@ -144,7 +153,10 @@ clean_stock_vol <- read_csv("data/equity/clean_selected.csv") %>%
   group_by(date) %>%
   transmute(clean_volume = sum(total_volume)) %>%
   ungroup() %>%
-  unique()
+  unique() %>% # Delete redundant entries per month
+  # Calculate volume percentage change
+  tq_transmute(clean_volume, mutate_fun = periodReturn, period = "monthly",
+               col_rename = "clean_stock_vol_change_perc")
 
 oil_gas_stock_vol <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
   cleanse_stock_data() %>%
@@ -154,7 +166,10 @@ oil_gas_stock_vol <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
   group_by(date) %>%
   transmute(oil_gas_volume = sum(total_volume)) %>%
   ungroup() %>%
-  unique()
+  unique() %>% # Delete redundant entries per month
+  # Calculate volume percentage change
+  tq_transmute(oil_gas_volume, mutate_fun = periodReturn, period = "monthly",
+               col_rename = "oil_gas_stock_vol_change_perc")
 
 utility_stock_vol <- read_csv("data/equity/utility_selected.csv") %>%
   cleanse_stock_data() %>%
@@ -164,7 +179,10 @@ utility_stock_vol <- read_csv("data/equity/utility_selected.csv") %>%
   group_by(date) %>%
   transmute(utility_volume = sum(total_volume)) %>%
   ungroup() %>%
-  unique()
+  unique() %>% # Delete redundant entries per month
+  # Calculate volume percentage change
+  tq_transmute(utility_volume, mutate_fun = periodReturn, period = "monthly",
+               col_rename = "utility_stock_vol_change_perc")
 
 # Initialize output dataframe
 output_df <- spx %>%
@@ -176,6 +194,14 @@ output_df <- spx %>%
   merge(oil_gas_stock_vol) %>%
   merge(utility_stock_vol)
 
+# Clean up memory
+rm(list = ls(spx, clean_stock_monthly_return, oil_gas_stock_monthly_return,
+             utility_stock_monthly_return, gmb_monthly_return,
+             clean_stock_vol, oil_gas_stock_vol, utility_stock_vol))
+gc()
+
+################################################################################
+# Stock data merge completed
 # Load monthly FF factors
 ff_monthly <- read_csv("data/equity/F-F_Research_Data_Factors_monthly.csv") %>%
   rename(Mkt_RF = `Mkt-RF`) %>%
@@ -185,9 +211,11 @@ ff_monthly <- read_csv("data/equity/F-F_Research_Data_Factors_monthly.csv") %>%
 oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv") %>%
   mutate(date = as.Date(date, "%m/%d/%Y")) %>%
   rename(wti_spot_price = `dollars per barrel`) %>%
-  tq_transmute(wti_spot_price, mutate_fun = to.period, period = "month", col_rename = "wti_spot_price") %>%
-  tq_mutate(wti_spot_price, mutate_fun = periodReturn, col_rename = "wti_return") %>%
-  # Floor the date monthly to merge with other dataframe
+  tq_transmute(wti_spot_price, mutate_fun = to.period, period = "month",
+               col_rename = "wti_spot_price") %>%
+  tq_mutate(wti_spot_price, mutate_fun = periodReturn,
+            col_rename = "wti_return") %>%
+  # Floor the date monthly to merge with other dataframes
   mutate(date = floor_date(date, unit = "month"))
 
 # Load twitter data
@@ -196,25 +224,41 @@ twitter_df <- read_twitter_csv("data/tweet_sentiment.csv")
 twitter_df <- twitter_df %>%
   mutate(date = as.Date(created_at), .after = created_at) %>%
   select(-created_at) %>%
-  select(date, status_id, retweet_count, quote_count, reply_count, sentiment) %>%
+  select(date, status_id, retweet_count, quote_count,
+         reply_count, sentiment) %>%
   filter(date >= as.Date("2012-03-01"))
-# Construct summary of twitter mean and standard dev, as well as tweet No. per month
+# Construct summary of twitter mean and standard dev
+# as well as tweet No. per month
 twitter_summary <- twitter_df %>%
   mutate(date = floor_date(date, unit = "month"))
 twitter_summary <- twitter_summary %>%
   merge(count(twitter_summary, date, name = "monthly_tweet_count")) %>%
   group_by(date) %>%
-  summarize(date, across(sentiment, list(mean = ~ mean(.x, na.rm = TRUE), sd = ~ sd(.x, na.rm = TRUE))), monthly_tweet_count) %>%
+  summarize(date, across(sentiment,
+                         list(mean = ~ mean(.x, na.rm = TRUE),
+                              sd = ~ sd(.x, na.rm = TRUE))),
+            monthly_tweet_count) %>%
   ungroup() %>%
   distinct() %>%
-  mutate(lag1_tweet_count = lag(monthly_tweet_count, n = 1),
-         tweet_count_change_perc = monthly_tweet_count / lag1_tweet_count - 1)
+  # Calculate monthly tweet count change
+  mutate(tweet_count_change_perc =
+           monthly_tweet_count / lag(monthly_tweet_count) - 1)
+
+# Load processed NYC weather data
+knyc_wx <- read_csv("data/KNYC_monthly_summary_processed.csv") %>%
+  select(date, ab_temp)
 
 # Merge output dataframe with FF factors, WTI spot price and twitter summary
 output_df <- output_df %>%
   merge(ff_monthly) %>%
   merge(oil_df) %>%
   merge(twitter_summary) %>%
+  merge(knyc_wx) %>%
   filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
 
+# Save output dataframe to csv
 write_csv(output_df, "data/combined_monthly_data.csv")
+
+# Clean up memory
+rm(list = ls())
+gc()

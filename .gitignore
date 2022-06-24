@@ -3,4 +3,9 @@
 .RData
 .Ruserdata
 .DS_Store
-data/
+data/equity/
+data/1_Tweet_IDs.csv
+data/tweet.csv
+data/tweet.old
+data/tweet_sentiment.csv
+data/twitter_raw/

@@ -15,12 +15,14 @@ summary(clean_return_model)
 autoplot(clean_return_model)
 cor(resid(clean_return_model), analysis_df$monthly_tweet_count)
 
-oil_gas_return_model <- lm(oil_gas_return - RF ~  lag1_tweet_count + log(wti_spot_price) + Mkt_RF + SMB + HML, data = analysis_df)
+
+## OG significantly explained by lag 1 monthly tweet count
+oil_gas_return_model <- lm(oil_gas_return - RF ~  lag(monthly_tweet_count) + log(wti_spot_price) + Mkt_RF + SMB + HML, data = analysis_df)
 summary(oil_gas_return_model)
 autoplot(oil_gas_return_model)
 cor(resid(oil_gas_return_model), analysis_df$lag1_tweet_count)
 
-utility_return_model <- lm(utility_return ~   monthly_tweet_count + log(wti_spot_price) + Mkt_RF, data = analysis_df)
+utility_return_model <- lm(utility_return ~ monthly_tweet_count + log(wti_spot_price) + Mkt_RF, data = analysis_df)
 summary(utility_return_model)
 autoplot(utility_return_model)
 cor(resid(utility_return_model), analysis_df$monthly_tweet_count)
@@ -50,3 +52,5 @@ autoplot(oil_tweet)
 ggplot(analysis_df, aes(x = date, y = monthly_tweet_count)) +
   geom_point()
 
+test <- lm(lag1_tweet_count ~ lag(monthly_tweet_count), data = analysis_df)
+summary(test)
