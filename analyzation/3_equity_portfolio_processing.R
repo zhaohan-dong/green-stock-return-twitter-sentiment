@@ -195,9 +195,9 @@ output_df <- spx %>%
   merge(utility_stock_vol)
 
 # Clean up memory
-rm(list = ls(spx, clean_stock_monthly_return, oil_gas_stock_monthly_return,
+rm(spx, clean_stock_monthly_return, oil_gas_stock_monthly_return,
              utility_stock_monthly_return, gmb_monthly_return,
-             clean_stock_vol, oil_gas_stock_vol, utility_stock_vol))
+             clean_stock_vol, oil_gas_stock_vol, utility_stock_vol)
 gc()
 
 ################################################################################
@@ -208,15 +208,19 @@ ff_monthly <- read_csv("data/equity/F-F_Research_Data_Factors_monthly.csv") %>%
   mutate(date = as.Date(paste0(as.character(date), "01"), format = "%Y%m%d"))
 
 # Load WTI oil price
-oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv") %>%
-  mutate(date = as.Date(date, "%m/%d/%Y")) %>%
-  rename(wti_spot_price = `dollars per barrel`) %>%
-  tq_transmute(wti_spot_price, mutate_fun = to.period, period = "month",
-               col_rename = "wti_spot_price") %>%
-  tq_mutate(wti_spot_price, mutate_fun = periodReturn,
-            col_rename = "wti_return") %>%
-  # Floor the date monthly to merge with other dataframes
-  mutate(date = floor_date(date, unit = "month"))
+# oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv") %>%
+#   mutate(date = as.Date(date, "%m/%d/%Y")) %>%
+#   rename(wti_spot_price = `dollars per barrel`) %>%
+#   tq_transmute(wti_spot_price, mutate_fun = to.period, period = "month",
+#                col_rename = "wti_spot_price") %>%
+#   tq_mutate(wti_spot_price, mutate_fun = periodReturn,
+#             col_rename = "wti_return") %>%
+#   # Floor the date monthly to merge with other dataframes
+#   mutate(date = floor_date(date, unit = "month"))
+oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB_Monthly.csv") %>%
+  mutate(date = as.Date(paste0("01-", date), "%d-%b-%y")) %>%
+  rename(wti_spot_price = `dollars per barrel`) 
+
 
 # Load twitter data
 twitter_df <- read_twitter_csv("data/tweet_sentiment.csv")
@@ -226,7 +230,7 @@ twitter_df <- twitter_df %>%
   select(-created_at) %>%
   select(date, status_id, retweet_count, quote_count,
          reply_count, sentiment) %>%
-  filter(date >= as.Date("2012-03-01"))
+  filter(date > as.Date("2012-01-31"))
 # Construct summary of twitter mean and standard dev
 # as well as tweet No. per month
 twitter_summary <- twitter_df %>%
@@ -252,9 +256,9 @@ knyc_wx <- read_csv("data/KNYC_monthly_summary_processed.csv") %>%
 output_df <- output_df %>%
   merge(ff_monthly) %>%
   merge(oil_df) %>%
-  merge(twitter_summary) %>%
+  right_join(twitter_summary) %>%
   merge(knyc_wx) %>%
-  filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
+  filter(date > as.Date("2012-01-31") & date < as.Date("2018-05-01"))
 
 # Save output dataframe to csv
 write_csv(output_df, "data/combined_monthly_data.csv")

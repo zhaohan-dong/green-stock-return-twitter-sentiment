@@ -13,3 +13,9 @@ data/tweet.csv
 data/tweet.old
 data/tweet_sentiment.csv
 data/twitter_raw/
+
+Monthly WTI Crude Spot
+https://www.eia.gov/opendata/v1/qb.php?sdid=PET.RWTC.M
+
+Monthly Temperature:
+https://www.ncdc.noaa.gov/cdo-web/datasets
