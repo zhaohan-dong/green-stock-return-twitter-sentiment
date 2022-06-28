@@ -9,7 +9,7 @@ require(car, quietly = TRUE)
 analysis_df <- read_csv("data/combined_monthly_data.csv")
 
 # Create multiple linear regression model for return
-clean_return_model <- lm(clean_return - RF ~  monthly_tweet_count + sentiment_mean + log(wti_spot_price) +
+clean_return_model <- lm(clean_return - RF ~  tweet_count_change_perc + sentiment_mean + log(wti_spot_price) +
                            Mkt_RF + SMB + HML + ab_temp,
                          data = analysis_df)
 summary(clean_return_model)
@@ -28,13 +28,13 @@ autoplot(oil_gas_return_model)
 
 hist(analysis_df$sentiment_mean)
 
-utility_return_model <- lm(utility_return - RF ~
+utilities_return_model <- lm(utilities_return - RF ~
                              monthly_tweet_count + sentiment_mean + log(wti_spot_price) +
                              Mkt_RF + SMB + HML,
                            data = analysis_df)
-summary(utility_return_model)
-vif(utility_return_model)
-autoplot(utility_return_model)
+summary(utilities_return_model)
+vif(utilities_return_model)
+autoplot(utilities_return_model)
 
 gmb_return_model <- lm(gmb_return - RF ~
                          monthly_tweet_count + sentiment_mean + log(wti_spot_price) + Mkt_RF + SMB + HML + ab_temp,
@@ -63,11 +63,11 @@ hist(oil_gas_volume_model$residuals)
 plot(lag(analysis_df$monthly_tweet_count), oil_gas_volume_model$residuals)
 autoplot(oil_gas_volume_model)
 
-utility_volume_model <- lm(log(utility_volume) ~
+utilities_volume_model <- lm(log(utilities_volume) ~
                              lag(monthly_tweet_count) + log(wti_spot_price),
                            data = analysis_df)
-summary(utility_volume_model)
-autoplot(utility_volume_model)
+summary(utilities_volume_model)
+autoplot(utilities_volume_model)
 
 p <- ggplot(analysis_df)
 

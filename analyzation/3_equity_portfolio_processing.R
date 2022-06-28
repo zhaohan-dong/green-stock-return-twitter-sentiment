@@ -99,7 +99,7 @@ oil_gas_stock <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
   cleanse_stock_data() %>%
   filter(data_field == "PX_LAST")
 
-utility_stock <- read_csv("data/equity/utility_selected.csv") %>%
+utilities_stock <- read_csv("data/equity/utilities_selected.csv") %>%
   cleanse_stock_data() %>%
   filter(data_field == "PX_LAST")
 
@@ -127,12 +127,12 @@ oil_gas_stock_monthly_return <- oil_gas_stock %>%
                col_rename = "oil_gas_return") %>%
   mutate(date = floor_date(date, unit = "month"))
 
-utility_stock_monthly_return <- utility_stock %>%
+utilities_stock_monthly_return <- utilities_stock %>%
   group_by(ticker) %>%
   tq_transmute(value, mutate_fun = periodReturn, period = "monthly") %>%
   # Calculate portfolio return, change weight here for other weighting
   tq_portfolio(assets_col = ticker, returns_col = monthly.returns,
-               col_rename = "utility_return") %>%
+               col_rename = "utilities_return") %>%
   mutate(date = floor_date(date, unit = "month"))
 
 # Create Green minus brown long-short equal weight portfolio
@@ -171,33 +171,33 @@ oil_gas_stock_vol <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
   tq_mutate(oil_gas_volume, mutate_fun = periodReturn, period = "monthly",
                col_rename = "oil_gas_stock_vol_change_perc")
 
-utility_stock_vol <- read_csv("data/equity/utility_selected.csv") %>%
+utilities_stock_vol <- read_csv("data/equity/utilities_selected.csv") %>%
   cleanse_stock_data() %>%
   get_volume() %>%
   transmute(date = floor_date(date, unit = "month"),
             total_volume = rowSums(select(., -date))) %>%
   group_by(date) %>%
-  transmute(utility_volume = sum(total_volume)) %>%
+  transmute(utilities_volume = sum(total_volume)) %>%
   ungroup() %>%
   unique() %>% # Delete redundant entries per month
   # Calculate volume percentage change
-  tq_mutate(utility_volume, mutate_fun = periodReturn, period = "monthly",
-               col_rename = "utility_stock_vol_change_perc")
+  tq_mutate(utilities_volume, mutate_fun = periodReturn, period = "monthly",
+               col_rename = "utilities_stock_vol_change_perc")
 
 # Initialize output dataframe
 output_df <- spx %>%
   merge(clean_stock_monthly_return) %>%
   merge(oil_gas_stock_monthly_return) %>%
-  merge(utility_stock_monthly_return) %>%
+  merge(utilities_stock_monthly_return) %>%
   merge(gmb_monthly_return) %>%
   merge(clean_stock_vol) %>%
   merge(oil_gas_stock_vol) %>%
-  merge(utility_stock_vol)
+  merge(utilities_stock_vol)
 
 # Clean up memory
 rm(spx, clean_stock_monthly_return, oil_gas_stock_monthly_return,
-             utility_stock_monthly_return, gmb_monthly_return,
-             clean_stock_vol, oil_gas_stock_vol, utility_stock_vol)
+             utilities_stock_monthly_return, gmb_monthly_return,
+             clean_stock_vol, oil_gas_stock_vol, utilities_stock_vol)
 gc()
 
 ################################################################################
