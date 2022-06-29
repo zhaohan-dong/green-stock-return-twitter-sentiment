@@ -37,3 +37,27 @@ tweet_df$sentiment <- vader_df(tweet_df$text, neu_set=T)$compound
 
 # Save file
 save_as_csv(tweet_df, "data/tweet_sentiment.csv")
+
+# Load twitter data
+twitter_df <- read_twitter_csv("data/tweet_sentiment.csv")
+# Removing tweet data not contingent for research
+twitter_df <- twitter_df %>%
+  mutate(date = as.Date(created_at), .after = created_at) %>%
+  select(-created_at) %>%
+  select(date, status_id, retweet_count, quote_count,
+         reply_count, sentiment)
+# Construct summary of twitter mean and standard dev
+# as well as tweet No. per month
+twitter_summary <- twitter_df %>%
+  mutate(date = floor_date(date, unit = "month"))
+twitter_summary <- twitter_summary %>%
+  merge(count(twitter_summary, date, name = "monthly_tweet_count")) %>%
+  group_by(date) %>%
+  summarize(date, across(sentiment,
+                         list(mean = ~ mean(.x, na.rm = TRUE),
+                              sd = ~ sd(.x, na.rm = TRUE))),
+            monthly_tweet_count) %>%
+  ungroup() %>%
+  distinct()
+
+save_as_csv(twitter_summary, "data/twitter_summary.csv")

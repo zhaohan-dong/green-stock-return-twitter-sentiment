@@ -192,7 +192,8 @@ output_df <- spx %>%
   merge(gmb_monthly_return) %>%
   merge(clean_stock_vol) %>%
   merge(oil_gas_stock_vol) %>%
-  merge(utilities_stock_vol)
+  merge(utilities_stock_vol) %>%
+  filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
 
 # Clean up memory
 rm(spx, clean_stock_monthly_return, oil_gas_stock_monthly_return,
@@ -223,30 +224,36 @@ oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB_Monthly.csv") %>%
 
 
 # Load twitter data
-twitter_df <- read_twitter_csv("data/tweet_sentiment.csv")
-# Removing tweet data not contingent for research
-twitter_df <- twitter_df %>%
-  mutate(date = as.Date(created_at), .after = created_at) %>%
-  select(-created_at) %>%
-  select(date, status_id, retweet_count, quote_count,
-         reply_count, sentiment) %>%
-  filter(date > as.Date("2012-01-31"))
-# Construct summary of twitter mean and standard dev
-# as well as tweet No. per month
-twitter_summary <- twitter_df %>%
-  mutate(date = floor_date(date, unit = "month"))
-twitter_summary <- twitter_summary %>%
-  merge(count(twitter_summary, date, name = "monthly_tweet_count")) %>%
-  group_by(date) %>%
-  summarize(date, across(sentiment,
-                         list(mean = ~ mean(.x, na.rm = TRUE),
-                              sd = ~ sd(.x, na.rm = TRUE))),
-            monthly_tweet_count) %>%
-  ungroup() %>%
-  distinct() %>%
+twitter_df <- read_twitter_csv("data/twitter_summary.csv") %>%
   # Calculate monthly tweet count change
   mutate(tweet_count_change_perc =
            monthly_tweet_count / lag(monthly_tweet_count) - 1)
+
+# Twitter mau
+twitter_mau <- read_csv("data/twitter_mau.csv") %>%
+  mutate(date = as.Date(date, "%m/%d/%Y"))
+months <- lapply(X = twitter_mau$date, FUN = seq.Date, by = "month", length.out = 3)
+months <- data.frame(date = do.call(what = c, months))
+twitter_mau <- left_join(x = months, y = twitter_mau, by = "date")
+twitter_mau$mau <- na.spline(object = twitter_mau$mau) # Extrapolate mau per month from per quarter data
+twitter_summary <- twitter_summary %>%
+  left_join(y = twitter_mau) %>%
+  mutate(count_per_mau = monthly_tweet_count / mau)
+
+# Load etf fund flow data
+etf_df <- read_csv("data/equity/fund_flow.csv") %>%
+  cleanse_stock_data() %>%
+  filter(data_field == "FUND_FLOW") %>%
+  pivot_wider(id_cols = date, names_from = ticker, values_from = value) %>%
+  rowwise() %>%
+  mutate(total_flow = sum(c_across(where(is.numeric))),
+         date = floor_date(date, "monthly"))
+
+# Calculate arima model
+twitter_ar <- arima(x = twitter_summary$count_per_mau, order = c(1, 0, 0))
+
+twitter_summary <- twitter_summary %>%
+  mutate(tweet_count_ar1_res = twitter_ar$residuals)
 
 # Load processed NYC weather data
 knyc_wx <- read_csv("data/KNYC_monthly_summary_processed.csv") %>%
@@ -258,6 +265,7 @@ output_df <- output_df %>%
   merge(oil_df) %>%
   right_join(twitter_summary) %>%
   merge(knyc_wx) %>%
+  merge(etf_df) %>%
   filter(date > as.Date("2012-01-31") & date < as.Date("2018-05-01"))
 
 # Save output dataframe to csv

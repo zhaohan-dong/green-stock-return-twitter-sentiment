@@ -6,23 +6,30 @@ require(broom, quietly = TRUE)
 require(ggfortify, quietly = TRUE)
 require(car, quietly = TRUE)
 
-analysis_df <- read_csv("data/combined_monthly_data.csv")
+analysis_df <- read_csv("data/combined_monthly_data.csv") %>%
+  mutate(oil_gas_return = oil_gas_return * 100) %>%
+  mutate(clean_return = clean_return * 100) %>%
+  mutate(utilities_return = utilities_return * 100) %>%
+  mutate(gmb_return = gmb_return * 100) %>%
+  filter(date < "2018-05-01")
 
 # Create multiple linear regression model for return
-clean_return_model <- lm(clean_return - RF ~  tweet_count_change_perc + sentiment_mean + log(wti_spot_price) +
-                           Mkt_RF + SMB + HML + ab_temp,
+clean_return_model <- lm(clean_return - RF ~  lag(count_per_mau, n = 0) +
+                           Mkt_RF + SMB + HML,
                          data = analysis_df)
 summary(clean_return_model)
+durbinWatsonTest(clean_return_model)
 vif(clean_return_model)
 autoplot(clean_return_model)
 cor(resid(clean_return_model), analysis_df$monthly_tweet_count)
 
 ## OG significantly explained by lag 1 monthly tweet count
 oil_gas_return_model <- lm(oil_gas_return - RF ~ 
-                             monthly_tweet_count + sentiment_mean + log(wti_spot_price) +
-                             Mkt_RF + SMB + HML + ab_temp,
+                             Mkt_RF + SMB + HML,
                            data = analysis_df)
 summary(oil_gas_return_model)
+oil_gas_return_model$residuals
+durbinWatsonTest(oil_gas_return_model)
 vif(oil_gas_return_model)
 autoplot(oil_gas_return_model)
 
@@ -56,7 +63,7 @@ summary(clean_volume_model)
 autoplot(clean_volume_model)
 
 oil_gas_volume_model <- lm(log(oil_gas_volume) ~
-                             lag(monthly_tweet_count) + log(wti_spot_price),
+                             lag(monthly_tweet_count) / lag(monthly_tweet_count, 2) + log(wti_spot_price),
                            data = analysis_df)
 summary(oil_gas_volume_model)
 hist(oil_gas_volume_model$residuals)
@@ -64,12 +71,25 @@ plot(lag(analysis_df$monthly_tweet_count), oil_gas_volume_model$residuals)
 autoplot(oil_gas_volume_model)
 
 utilities_volume_model <- lm(log(utilities_volume) ~
-                             lag(monthly_tweet_count) + log(wti_spot_price),
+                             lag(monthly_tweet_count),
                            data = analysis_df)
 summary(utilities_volume_model)
+vif(utilities_volume_model)
 autoplot(utilities_volume_model)
+
+cor(log(analysis_df$wti_spot_price), lag(analysis_df$monthly_tweet_count, 2), use = "complete.obs")
+
+
+analysis_df$res <- c(NA, NA, residuals(oil_gas_return_model))
 
 p <- ggplot(analysis_df)
 
-p + aes(x = log(1 + oil_gas_return - RF), y = lag(monthly_tweet_count)) +
-  geom_point()
+p + 
+  geom_line(aes(y = lag(total_flow * 5 + 500, n = 1), x = date), color="red") +
+  #geom_line(aes(y = lag(count_per_mau, n = 0), x = date), color="blue") +
+  geom_line(aes(y = lag(tweet_count_ar1_res + 300, n =0), x = date), color="orange")
+
+test <- lm(lag(res, 0) ~ lag(tweet_count_ar1_res, 0), data = analysis_df, na.action = na.omit)
+summary(test)
+cor(analysis_df$res, analysis_df$tweet_count_ar1_res, use = "complete.obs")
+summary()
