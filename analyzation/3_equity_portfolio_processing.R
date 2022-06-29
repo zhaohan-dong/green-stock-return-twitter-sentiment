@@ -224,9 +224,10 @@ oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB_Monthly.csv") %>%
 
 
 # Load twitter data
-twitter_df <- read_twitter_csv("data/twitter_summary.csv") %>%
+twitter_summary <- read_twitter_csv("data/twitter_summary.csv") %>%
   # Calculate monthly tweet count change
-  mutate(tweet_count_change_perc =
+  mutate(date = as.Date(date),
+         tweet_count_change_perc =
            monthly_tweet_count / lag(monthly_tweet_count) - 1)
 
 # Twitter mau
