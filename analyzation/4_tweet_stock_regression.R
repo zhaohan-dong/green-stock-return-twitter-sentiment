@@ -14,7 +14,7 @@ analysis_df <- read_csv("data/combined_monthly_data.csv") %>%
   filter(date < "2018-05-01")
 
 # Create multiple linear regression model for return
-clean_return_model <- lm(clean_return - RF ~  lag(count_per_mau, n = 0) +
+clean_return_model <- lm(clean_return - RF ~  lag(tweet_count_ar1_res, n = 5) +
                            Mkt_RF + SMB + HML,
                          data = analysis_df)
 summary(clean_return_model)
@@ -85,11 +85,12 @@ analysis_df$res <- c(NA, NA, residuals(oil_gas_return_model))
 p <- ggplot(analysis_df)
 
 p + 
-  geom_line(aes(y = lag(total_flow * 5 + 500, n = 1), x = date), color="red") +
+  #geom_line(aes(y = lag((clean_return - RF) * 10, n = 0), x = date), color="red") +
+ # geom_line(aes(y = lag(log10(total_flow), 0), x = date), color="blue") +
   #geom_line(aes(y = lag(count_per_mau, n = 0), x = date), color="blue") +
-  geom_line(aes(y = lag(tweet_count_ar1_res + 300, n =0), x = date), color="orange")
+  geom_line(aes(y = lag(monthly_tweet_count, n = 0) / 100000 , x = date), color="orange")
 
-test <- lm(lag(res, 0) ~ lag(tweet_count_ar1_res, 0), data = analysis_df, na.action = na.omit)
+test <- lm(lag(log(analysis_df$total_flow), n = 8) ~ lag(analysis_df$monthly_tweet_count / 1000000, n = 0), data = analysis_df, na.action = na.omit)
 summary(test)
-cor(analysis_df$res, analysis_df$tweet_count_ar1_res, use = "complete.obs")
+cor.test(lag(analysis_df$total_flow, n = 8), lag(analysis_df$monthly_tweet_count, n = 0), use = "complete.obs")
 summary()
