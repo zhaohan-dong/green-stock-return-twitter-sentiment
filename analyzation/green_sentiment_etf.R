@@ -69,12 +69,14 @@ result_df <- data.frame()
 
 for (d in unique(etf_df$date)) {
   monthly_df <- etf_df %>% filter(date == d)
-  monthly_model <- lm(flows ~ green + return, data = monthly_df, na.action = na.omit)
+  monthly_model <- lm(flows ~ log(nav) + green + return, data = monthly_df, na.action = na.omit)
   result_df <- result_df %>%
     rbind(cbind(d, t(monthly_model$coefficients)))
 }
 result_df <- result_df %>%
   rename(date = d) %>%
   mutate(date = as.Date(date, origin = "1970-01-01")) %>%
-  arrange(date)
+  arrange(date) %>%
+  select(date, green)
 
+ggplot(result_df) + geom_line(aes(x=date, y=green))
