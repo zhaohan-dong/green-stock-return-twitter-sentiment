@@ -52,14 +52,14 @@ green_etf_df <- read_csv("data/equity/green_etf_flow.csv") %>%
          shares_out = EQY_SH_OUT,
          nav = FUND_TOTAL_ASSETS) %>%
   mutate(flows = shares_out / lag(shares_out) - 1,
-         green = 1,
+         green_etf = 1,
          nav = nav / shares_out,
          return = price / lag(price) - 1) %>%
   select(-fund_flow)
 
 etf_df <- etf_df %>% 
   filter(!ticker %in% unique(green_etf_df$ticker)) %>%
-  mutate(green = 0) %>%
+  mutate(green_etf = 0) %>%
   rbind(green_etf_df)
 
 rm(etf_nav_df, green_etf_df)
@@ -69,7 +69,7 @@ result_df <- data.frame()
 
 for (d in unique(etf_df$date)) {
   monthly_df <- etf_df %>% filter(date == d)
-  monthly_model <- lm(flows ~ log(nav) + green + return, data = monthly_df, na.action = na.omit)
+  monthly_model <- lm(flows ~ log(nav) + green_etf + return, data = monthly_df, na.action = na.omit)
   result_df <- result_df %>%
     rbind(cbind(d, t(monthly_model$coefficients)))
 }
@@ -77,7 +77,7 @@ result_df <- result_df %>%
   rename(date = d) %>%
   mutate(date = as.Date(date, origin = "1970-01-01")) %>%
   arrange(date) %>%
-  select(date, green)
+  select(date, green_etf)
 
 write_csv(result_df, "data/green_etf_factor.csv")
 

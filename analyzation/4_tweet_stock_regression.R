@@ -13,6 +13,10 @@ analysis_df <- read_csv("data/combined_monthly_data.csv") %>%
   mutate(gmb_return = gmb_return * 100) %>%
   filter(date < "2018-05-01")
 
+green_factor <- read_csv("data/green_etf_factor.csv")
+
+analysis_df <- merge(analysis_df, green_factor)
+
 # Create multiple linear regression model for return
 clean_return_model <- lm(clean_return - RF ~  lag(tweet_count_ar1_res, n = 5) +
                            Mkt_RF + SMB + HML,
