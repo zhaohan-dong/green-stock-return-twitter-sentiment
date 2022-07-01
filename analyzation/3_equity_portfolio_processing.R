@@ -241,24 +241,6 @@ twitter_summary <- twitter_summary %>%
   left_join(y = twitter_mau) %>%
   mutate(count_per_mau = monthly_tweet_count / mau)
 
-# Load etf fund flow data
-etf_df <- read_csv("data/equity/fund_flow.csv") %>%
-  cleanse_stock_data() %>%
-  filter(data_field == "EQY_SH_OUT") %>%
-  pivot_wider(id_cols = date, names_from = ticker, values_from = value) %>%
-  rowwise() %>%
-  mutate(total_flow = sum(c_across(where(is.numeric))),
-         date = floor_date(date, "monthly"))
-
-# Calculate arima model
-twitter_ar <- arima(x = twitter_summary$tweet_count_change_perc, order = c(1, 0, 0))
-twitter_summary <- twitter_summary %>%
-  mutate(tweet_count_ar1_res = twitter_ar$residuals)
-flow_lm <- lm(total_flow ~ date, data = etf_df)
-etf_df <- etf_df %>%
-  cbind(flow_lm_res = flow_lm$residuals)
-summary(flow_lm)
-
 # Load processed NYC weather data
 knyc_wx <- read_csv("data/KNYC_monthly_summary_processed.csv") %>%
   select(date, ab_temp)
@@ -269,7 +251,6 @@ output_df <- output_df %>%
   merge(oil_df) %>%
   right_join(twitter_summary) %>%
   merge(knyc_wx) %>%
-  merge(etf_df) %>%
   filter(date > as.Date("2010-01-01") & date < as.Date("2018-05-01"))
 
 # Save output dataframe to csv
