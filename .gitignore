@@ -3,7 +3,6 @@
 .RData
 .Ruserdata
 .DS_Store
-data/equity/
 data/1_Tweet_IDs.csv
 data/tweet.csv
 data/tweet.old
