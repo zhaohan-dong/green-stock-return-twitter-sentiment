@@ -79,4 +79,4 @@ result_df <- result_df %>%
   arrange(date) %>%
   select(date, green)
 
-ggplot(result_df) + geom_line(aes(x=date, y=green))
+write_csv(result_df, "data/green_etf_factor.csv")
