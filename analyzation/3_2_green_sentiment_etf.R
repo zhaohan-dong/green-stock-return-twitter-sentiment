@@ -80,3 +80,6 @@ result_df <- result_df %>%
   select(date, green)
 
 write_csv(result_df, "data/green_etf_factor.csv")
+
+rm(list = ls())
+gc()
