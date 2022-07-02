@@ -5,20 +5,48 @@ require(tidyverse, quietly = TRUE)
 require(broom, quietly = TRUE)
 require(ggfortify, quietly = TRUE)
 require(car, quietly = TRUE)
+require(DescTools, quietly = TRUE)
 
+# Import and merge data
 analysis_df <- read_csv("data/combined_monthly_data.csv") %>%
   mutate(oil_gas_return = oil_gas_return * 100) %>%
   mutate(clean_return = clean_return * 100) %>%
   mutate(utilities_return = utilities_return * 100) %>%
   mutate(gmb_return = gmb_return * 100) %>%
   filter(date < "2018-05-01")
-
 green_factor <- read_csv("data/green_etf_factor.csv")
-
 analysis_df <- merge(analysis_df, green_factor)
 
+model <- arima(analysis_df$monthly_tweet_count, order = c(1, 0, 0))
+analysis_df <- analysis_df %>% mutate(ar1_res = c(model$residuals))
+
+# Plot playground
+p <- ggplot(analysis_df)
+p + 
+  #geom_line(aes(y = lag((clean_return - RF) * 10, n = 0), x = date), color="red") +
+  # geom_line(aes(y = lag(log10(total_flow), 0), x = date), color="blue") +
+  geom_line(aes(y = lag(scale(green_etf), n = 0), x = date), color="blue") +
+  geom_line(aes(y = lag(Winsorize(tweet_count_change_perc), n = 1), x = date), color="orange")
+
+cor.test(Winsorize(analysis_df$green_etf), lag(Winsorize(analysis_df$tweet_count_change_perc, na.rm = TRUE), 5))
+
+new_df <- analysis_df %>%
+  select(date, green_etf, tweet_count_change_perc) %>%
+  mutate(green_etf = case_when(green_etf > 0 ~ 1,
+                               green_etf == 0 ~ 0,
+                               green_etf < 0 ~ -1),
+         tweet_count_change_perc = case_when(tweet_count_change_perc > 0 ~ 1,
+                                             tweet_count_change_perc == 0 ~ 0,
+                                             tweet_count_change_perc < 0 ~ -1))
+
+q <- ggplot(new_df)
+q +   geom_line(aes(y = lag(green_etf, n = 0), x = date), color="blue") +
+  geom_line(aes(y = lag(tweet_count_change_perc, n = 0), x = date), color="orange")
+new_model <- lm(scale(green_etf) ~ lag(scale(ar1_res), n = 1), data = analysis_df)
+summary(new_model)
+
 # Create multiple linear regression model for return
-clean_return_model <- lm(clean_return - RF ~  lag(tweet_count_ar1_res, n = 5) +
+clean_return_model <- lm(clean_return - RF ~  lag(monthly_tweet_count, n = 3) +
                            Mkt_RF + SMB + HML,
                          data = analysis_df)
 summary(clean_return_model)
@@ -86,13 +114,6 @@ cor(log(analysis_df$wti_spot_price), lag(analysis_df$monthly_tweet_count, 2), us
 
 analysis_df$res <- c(NA, NA, residuals(oil_gas_return_model))
 
-p <- ggplot(analysis_df)
-
-p + 
-  #geom_line(aes(y = lag((clean_return - RF) * 10, n = 0), x = date), color="red") +
- # geom_line(aes(y = lag(log10(total_flow), 0), x = date), color="blue") +
-  #geom_line(aes(y = lag(count_per_mau, n = 0), x = date), color="blue") +
-  geom_line(aes(y = lag(monthly_tweet_count, n = 0) / 100000 , x = date), color="orange")
 
 test <- lm(lag(log(analysis_df$total_flow), n = 8) ~ lag(analysis_df$monthly_tweet_count / 1000000, n = 0), data = analysis_df, na.action = na.omit)
 summary(test)
