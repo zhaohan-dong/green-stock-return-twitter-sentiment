@@ -55,4 +55,10 @@ news_summary_df <- nyt_climate_change %>%
                           monthly_ap_global_warming_count)) %>%
   ungroup()
 
+summary_df <- read_csv("data/combined_monthly_data.csv")
+green_etf_factor <- read_csv("data/green_etf_factor.csv")
+
+df <- news_summary_df %>%
+  merge(summary_df) %>%
+  merge(green_etf_factor)
 
