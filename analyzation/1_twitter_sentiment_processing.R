@@ -5,6 +5,7 @@
 require("rtweet", quietly = TRUE)
 require("tidyverse", quietly = TRUE)
 require("vader", quietly = TRUE)
+require("lubridate", quietly = TRUE)
 
 # Load the dataset
 tweet_df <- read_twitter_csv("data/tweet.csv")
