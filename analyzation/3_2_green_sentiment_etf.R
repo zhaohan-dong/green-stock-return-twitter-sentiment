@@ -75,7 +75,8 @@ for (d in unique(etf_df$date)) {
 }
 result_df <- result_df %>%
   rename(date = d) %>%
-  mutate(date = as.Date(date, origin = "1970-01-01")) %>%
+  mutate(date = as.Date(date, origin = "1970-01-01"),
+         green_etf = c(scale(green_etf))) %>%
   arrange(date) %>%
   select(date, green_etf)
 

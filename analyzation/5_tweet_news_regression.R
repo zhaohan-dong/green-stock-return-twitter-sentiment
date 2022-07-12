@@ -61,7 +61,8 @@ green_etf_factor <- read_csv("data/green_etf_factor.csv")
 
 df <- news_summary_df %>%
   merge(summary_df) %>%
-  merge(green_etf_factor)
+  merge(green_etf_factor) %>%
+  filter(date >= as.Date("2012-04-01"))
 
 tweet_model <- arima(df$monthly_tweet_count, order = c(1, 0, 0))
 nyt_model <- arima(df$nyt_total, order = c(1, 0, 0))

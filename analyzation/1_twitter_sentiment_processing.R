@@ -62,3 +62,7 @@ twitter_summary <- twitter_summary %>%
   distinct()
 
 save_as_csv(twitter_summary, "data/twitter_summary.csv")
+
+# Clean up memory
+rm(list = ls())
+gc()

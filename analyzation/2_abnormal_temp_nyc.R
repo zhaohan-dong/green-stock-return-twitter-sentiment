@@ -43,3 +43,7 @@ nyc_wx <- rename_with(nyc_wx, tolower) %>%
   filter(!is.na(ab_temp))
 
 write.csv(nyc_wx, "data/KNYC_monthly_summary_processed.csv")
+
+# Clean up memory
+rm(list = ls())
+gc()
