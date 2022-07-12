@@ -81,3 +81,4 @@ p + geom_line(aes(y = news_residual)) +
 
 cor.test(df$nyt_residual, lag(df$tweet_residual, 1), use = "complete.obs")
 
+
