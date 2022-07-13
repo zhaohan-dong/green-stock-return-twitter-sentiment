@@ -50,33 +50,28 @@ autoplot(oil_gas_return_model)
 hist(analysis_df$sentiment_mean)
 
 utilities_return_model <- lm(utilities_return - RF ~
-                               lag(monthly_tweet_count, n = 0) + Mkt_RF + SMB + HML + log(wti_spot_price),
+                               lag(monthly_tweet_count, n = 0) + Mkt_RF + SMB + HML,
                            data = analysis_df)
 summary(utilities_return_model)
 vif(utilities_return_model)
 autoplot(utilities_return_model)
 
 gmb_return_model <- lm(gmb_return - RF ~
-                         lag(monthly_tweet_count, n = 0) + Mkt_RF + SMB + HML + log(wti_spot_price),
+                         lag(monthly_tweet_count, n = 2) + Mkt_RF + SMB + HML,
                        data = analysis_df)
 summary(gmb_return_model)
 vif(gmb_return_model)
 autoplot(gmb_return_model)
 
-# Skewness tests for log fitting
-skewness(analysis_df$oil_gas_return - analysis_df$RF)
-skewness(log(analysis_df$ab_temp))
-skewness(log(1 + analysis_df$oil_gas_return - analysis_df$RF))
-
 # Create multiple linear regression model for volume
 clean_volume_model <- lm(log(clean_volume) ~
-                           lag(monthly_tweet_count) + log(wti_spot_price),
+                           lag(monthly_tweet_count, 0),
                          data = analysis_df)
 summary(clean_volume_model)
 autoplot(clean_volume_model)
 
 oil_gas_volume_model <- lm(log(oil_gas_volume) ~
-                             lag(monthly_tweet_count) + log(wti_spot_price),
+                             lag(monthly_tweet_count, 0) + log(wti_spot_price),
                            data = analysis_df)
 summary(oil_gas_volume_model)
 hist(oil_gas_volume_model$residuals)
@@ -84,19 +79,21 @@ plot(lag(analysis_df$monthly_tweet_count), oil_gas_volume_model$residuals)
 autoplot(oil_gas_volume_model)
 
 utilities_volume_model <- lm(log(utilities_volume) ~
-                             lag(monthly_tweet_count),
+                             lag(monthly_tweet_count, 0),
                            data = analysis_df)
 summary(utilities_volume_model)
 vif(utilities_volume_model)
 autoplot(utilities_volume_model)
 
-cor(log(analysis_df$wti_spot_price), lag(analysis_df$monthly_tweet_count, 2), use = "complete.obs")
+gmb_volume_model <- lm(log(clean_volume + oil_gas_volume) ~
+                               lag(monthly_tweet_count, 0) + log(wti_spot_price),
+                             data = analysis_df)
+summary(gmb_volume_model)
+vif(gmb_volume_model)
+autoplot(gmb_volume_model)
 
+cor.test(log(analysis_df$wti_spot_price) / lag(log(analysis_df$wti_spot_price), 1) - 1, lag(analysis_df$tweet_count_change_perc, 1), use = "complete.obs")
 
-analysis_df$res <- c(NA, NA, residuals(oil_gas_return_model))
+p + theme_minimal() +
+  geom_line(aes(x = date, y = log(wti_spot_price)), color = "red")
 
-
-test <- lm(lag(log(analysis_df$total_flow), n = 8) ~ lag(analysis_df$monthly_tweet_count / 1000000, n = 0), data = analysis_df, na.action = na.omit)
-summary(test)
-cor.test(lag(analysis_df$total_flow, n = 8), lag(analysis_df$monthly_tweet_count, n = 0), use = "complete.obs")
-summary()
