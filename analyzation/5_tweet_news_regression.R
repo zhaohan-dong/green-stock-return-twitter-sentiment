@@ -4,6 +4,7 @@ require(tidyverse, quietly = TRUE)
 require(readxl, quietly = TRUE)
 require(lubridate, quietly = TRUE)
 
+# Load news data
 nyt_climate_change <- read_excel("data/nyt_climate_change_2008_2018.xlsx") %>%
   rename_all(tolower) %>%
   rename(date = `published date`) %>%
@@ -56,14 +57,17 @@ news_summary_df <- nyt_climate_change %>%
          news_total = nyt_total + ap_total) %>%
   ungroup()
 
+# Load stock and twitter data
 summary_df <- read_csv("data/combined_monthly_data.csv")
 green_etf_factor <- read_csv("data/green_etf_factor.csv")
 
+# Merge the dataframes
 df <- news_summary_df %>%
   merge(summary_df) %>%
   merge(green_etf_factor) %>%
   filter(date >= as.Date("2012-04-01"))
 
+# Calculate AR(1) for twitter and news to get residuals
 tweet_model <- arima(df$monthly_tweet_count, order = c(1, 0, 0))
 nyt_model <- arima(df$nyt_total, order = c(1, 0, 0))
 ap_model <- arima(df$ap_total, order = c(1, 0, 0))
@@ -79,6 +83,13 @@ p <- ggplot(df, aes(x = date))
 p + geom_line(aes(y = news_residual)) +
   geom_line(aes(y = tweet_residual / 1000, color = "Blue"))
 
-cor.test(df$nyt_residual, lag(df$tweet_residual, 1), use = "complete.obs")
+cor.test(lag(df$ap_residual, 0), lag(df$tweet_residual, 0), use = "complete.obs")
+cor.test(lag(df$nyt_residual, 0), lag(df$tweet_residual, 0), use = "complete.obs")
+cor.test(lag(df$news_residual, 0), lag(df$tweet_residual, 0), use = "complete.obs")
+cor.test(df$ap_total, lag(df$monthly_tweet_count, 0), use = "complete.obs")
+cor.test(df$nyt_total, lag(df$monthly_tweet_count, 0), use = "complete.obs")
+cor.test(df$news_total, lag(df$monthly_tweet_count, 0), use = "complete.obs")
 
-
+model <- lm(tweet_residual ~ nyt_residual, df)
+summary(model)
+durbinWatsonTest(model)
