@@ -76,17 +76,17 @@ get_price <- function(df) {
 # }
 
 # Calculate daily volume
-get_volume <- function(df) {
-  # Select and tidy data
-  result_df <- df %>%
-    filter(data_field == "PX_VOLUME") %>%
-    select(!data_field) %>%
-    pivot_wider(names_from = ticker,
-                values_from = value) %>%
-    # Replace NA values with previous value from column (same ticker)
-    na.locf()
-  return(result_df)
-}
+# get_volume <- function(df) {
+#   # Select and tidy data
+#   result_df <- df %>%
+#     filter(data_field == "PX_VOLUME") %>%
+#     select(!data_field) %>%
+#     pivot_wider(names_from = ticker,
+#                 values_from = value) %>%
+#     # Replace NA values with previous value from column (same ticker)
+#     na.locf()
+#   return(result_df)
+# }
 
 ############################################################################
 ## Beginning of task
@@ -144,45 +144,113 @@ gmb_monthly_return <- clean_stock_monthly_return %>%
   tq_portfolio(assets_col = name, returns_col = value,
                weights = c(23/75, 52/75), col_rename = "gmb_return")
 
-# Read volumes for portfolios
-clean_stock_vol <- read_csv("data/equity/clean_selected.csv") %>%
-  cleanse_stock_data() %>%
-  get_volume() %>%
-  transmute(date = floor_date(date, unit = "month"),
-            total_volume = rowSums(select(., -date))) %>%
-  group_by(date) %>%
-  transmute(clean_volume = sum(total_volume)) %>%
-  ungroup() %>%
-  unique() %>% # Delete redundant entries per month
-  # Calculate volume percentage change
-  tq_mutate(clean_volume, mutate_fun = periodReturn, period = "monthly",
-               col_rename = "clean_stock_vol_change_perc")
+# Load monthly FF factors
+ff_monthly <- read_csv("data/equity/F-F_Research_Data_Factors_monthly.csv") %>%
+  rename(Mkt_RF = `Mkt-RF`) %>%
+  mutate(date = as.Date(paste0(as.character(date), "01"), format = "%Y%m%d"))
 
-oil_gas_stock_vol <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
-  cleanse_stock_data() %>%
-  get_volume() %>%
-  transmute(date = floor_date(date, unit = "month"),
-            total_volume = rowSums(select(., -date))) %>%
+# Calculate monthly sharpe ratio
+clean_stock_monthly_sharpe <- clean_stock %>%
+  group_by(ticker) %>%
+  tq_transmute(value, mutate_fun = periodReturn, period = "daily") %>%
+  tq_portfolio(assets_col = ticker, returns_col = daily.returns,
+               col_rename = "clean_daily_return") %>%
+  mutate(date = floor_date(date, unit = "month")) %>%
+  left_join(ff_monthly %>% select(c("date", "RF"))) %>% # add riskfree data
   group_by(date) %>%
-  transmute(oil_gas_volume = sum(total_volume)) %>%
-  ungroup() %>%
-  unique() %>% # Delete redundant entries per month
-  # Calculate volume percentage change
-  tq_mutate(oil_gas_volume, mutate_fun = periodReturn, period = "monthly",
-               col_rename = "oil_gas_stock_vol_change_perc")
+  mutate(daily.returns = (clean_daily_return + 1) ^ 21 - 1) %>% # monthlize return
+  mutate(clean_stock_monthly_sharpe = mean(clean_daily_return - RF) / sd(clean_daily_return - RF)) %>%
+  select(c("date", "clean_stock_monthly_sharpe")) %>%
+  unique()
 
-utilities_stock_vol <- read_csv("data/equity/utilities_selected.csv") %>%
-  cleanse_stock_data() %>%
-  get_volume() %>%
-  transmute(date = floor_date(date, unit = "month"),
-            total_volume = rowSums(select(., -date))) %>%
+oil_gas_stock_monthly_sharpe <- oil_gas_stock %>%
+  group_by(ticker) %>%
+  tq_transmute(value, mutate_fun = periodReturn, period = "daily") %>%
+  tq_portfolio(assets_col = ticker, returns_col = daily.returns,
+               col_rename = "oil_gas_daily_return") %>%
+  mutate(date = floor_date(date, unit = "month")) %>%
+  left_join(ff_monthly %>% select(c("date", "RF"))) %>% # add riskfree data
   group_by(date) %>%
-  transmute(utilities_volume = sum(total_volume)) %>%
-  ungroup() %>%
-  unique() %>% # Delete redundant entries per month
-  # Calculate volume percentage change
-  tq_mutate(utilities_volume, mutate_fun = periodReturn, period = "monthly",
-               col_rename = "utilities_stock_vol_change_perc")
+  mutate(daily.returns = (oil_gas_daily_return + 1) ^ 21 - 1) %>% # monthlize return
+  mutate(oil_gas_stock_monthly_sharpe = mean(oil_gas_daily_return - RF) / sd(oil_gas_daily_return - RF)) %>%
+  select(c("date", "oil_gas_stock_monthly_sharpe")) %>%
+  unique()
+
+utilities_stock_monthly_sharpe <- utilities_stock %>%
+  group_by(ticker) %>%
+  tq_transmute(value, mutate_fun = periodReturn, period = "daily") %>%
+  tq_portfolio(assets_col = ticker, returns_col = daily.returns,
+               col_rename = "utilities_daily_return") %>%
+  mutate(date = floor_date(date, unit = "month")) %>%
+  left_join(ff_monthly %>% select(c("date", "RF"))) %>% # add riskfree data
+  group_by(date) %>%
+  mutate(daily.returns = (utilities_daily_return + 1) ^ 21 - 1) %>% # monthlize return
+  mutate(utilities_stock_monthly_sharpe = mean(utilities_daily_return - RF) / sd(utilities_daily_return - RF)) %>%
+  select(c("date", "utilities_stock_monthly_sharpe")) %>%
+  unique()
+
+gmb_monthly_sharpe <- clean_stock %>%
+  group_by(ticker) %>%
+  tq_transmute(value, mutate_fun = periodReturn, period = "daily") %>%
+  tq_portfolio(assets_col = ticker, returns_col = daily.returns,
+               col_rename = "clean_daily_return") %>%
+  full_join(oil_gas_stock %>%
+              group_by(ticker) %>%
+              tq_transmute(value, mutate_fun = periodReturn, period = "daily") %>%
+              tq_portfolio(assets_col = ticker, returns_col = daily.returns,
+                           col_rename = "oil_gas_daily_return")) %>%
+  mutate(oil_gas_daily_return = -oil_gas_daily_return) %>%
+  pivot_longer(cols = c(clean_daily_return, oil_gas_daily_return)) %>%
+  # Calculate return, has 23 green stocks and 52 oil/gas stocks
+  tq_portfolio(assets_col = name, returns_col = value,
+               weights = c(23/75, 52/75), col_rename = "gmb_daily_return") %>%
+  mutate(date = floor_date(date, unit = "month")) %>%
+  left_join(ff_monthly %>% select(c("date", "RF"))) %>% # add riskfree data
+  group_by(date) %>%
+  mutate(daily.returns = (gmb_daily_return + 1) ^ 21 - 1) %>% # monthlize return
+  mutate(gmb_monthly_sharpe = mean(gmb_daily_return - RF) / sd(gmb_daily_return - RF)) %>%
+  select(c("date", "gmb_monthly_sharpe")) %>%
+  unique()
+
+# # Read volumes for portfolios
+# clean_stock_vol <- read_csv("data/equity/clean_selected.csv") %>%
+#   cleanse_stock_data() %>%
+#   get_volume() %>%
+#   transmute(date = floor_date(date, unit = "month"),
+#             total_volume = rowSums(select(., -date))) %>%
+#   group_by(date) %>%
+#   transmute(clean_volume = sum(total_volume)) %>%
+#   ungroup() %>%
+#   unique() %>% # Delete redundant entries per month
+#   # Calculate volume percentage change
+#   tq_mutate(clean_volume, mutate_fun = periodReturn, period = "monthly",
+#                col_rename = "clean_stock_vol_change_perc")
+# 
+# oil_gas_stock_vol <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
+#   cleanse_stock_data() %>%
+#   get_volume() %>%
+#   transmute(date = floor_date(date, unit = "month"),
+#             total_volume = rowSums(select(., -date))) %>%
+#   group_by(date) %>%
+#   transmute(oil_gas_volume = sum(total_volume)) %>%
+#   ungroup() %>%
+#   unique() %>% # Delete redundant entries per month
+#   # Calculate volume percentage change
+#   tq_mutate(oil_gas_volume, mutate_fun = periodReturn, period = "monthly",
+#                col_rename = "oil_gas_stock_vol_change_perc")
+# 
+# utilities_stock_vol <- read_csv("data/equity/utilities_selected.csv") %>%
+#   cleanse_stock_data() %>%
+#   get_volume() %>%
+#   transmute(date = floor_date(date, unit = "month"),
+#             total_volume = rowSums(select(., -date))) %>%
+#   group_by(date) %>%
+#   transmute(utilities_volume = sum(total_volume)) %>%
+#   ungroup() %>%
+#   unique() %>% # Delete redundant entries per month
+#   # Calculate volume percentage change
+#   tq_mutate(utilities_volume, mutate_fun = periodReturn, period = "monthly",
+#                col_rename = "utilities_stock_vol_change_perc")
 
 # Initialize output dataframe
 output_df <- spx %>%
@@ -190,23 +258,26 @@ output_df <- spx %>%
   merge(oil_gas_stock_monthly_return) %>%
   merge(utilities_stock_monthly_return) %>%
   merge(gmb_monthly_return) %>%
-  merge(clean_stock_vol) %>%
-  merge(oil_gas_stock_vol) %>%
-  merge(utilities_stock_vol) %>%
+  merge(clean_stock_monthly_sharpe) %>%
+  merge(oil_gas_stock_monthly_sharpe) %>%
+  merge(utilities_stock_monthly_sharpe) %>%
+  merge(gmb_monthly_sharpe) %>%
+  # merge(clean_stock_vol) %>%
+  # merge(oil_gas_stock_vol) %>%
+  # merge(utilities_stock_vol) %>%
   filter(date > as.Date("2012-03-31") & date < as.Date("2018-05-01"))
 
 # Clean up memory
 rm(spx, clean_stock_monthly_return, oil_gas_stock_monthly_return,
-             utilities_stock_monthly_return, gmb_monthly_return,
-             clean_stock_vol, oil_gas_stock_vol, utilities_stock_vol)
+   utilities_stock_monthly_return, gmb_monthly_return,
+   clean_stock_monthly_sharpe, oil_gas_stock_monthly_sharpe,
+   utilities_stock_monthly_sharpe, gmb_monthly_sharpe #,
+   #clean_stock_vol, oil_gas_stock_vol, utilities_stock_vol
+   )
 gc()
 
 ################################################################################
 # Stock data merge completed
-# Load monthly FF factors
-ff_monthly <- read_csv("data/equity/F-F_Research_Data_Factors_monthly.csv") %>%
-  rename(Mkt_RF = `Mkt-RF`) %>%
-  mutate(date = as.Date(paste0(as.character(date), "01"), format = "%Y%m%d"))
 
 # Load WTI oil price
 # oil_df <- read_csv("data/Cushing_OK_WTI_Spot_Price_FOB.csv") %>%
