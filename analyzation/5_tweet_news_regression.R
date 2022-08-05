@@ -78,10 +78,25 @@ df$nyt_residual <- c(nyt_model$residuals)
 df$ap_residual <- c(ap_model$residuals)
 df$news_residual <- c(news_model$residuals)
 
-p <- ggplot(df, aes(x = date))
+# Plotting residuals
+p <- ggplot(df, aes(x = date)) + theme_classic()
+colors <- c("News Total" = "black", "NYT" = "orange", "AP" = "red", "Tweet / 1000" = "deepskyblue")
+p + geom_line(aes(y = news_total, color = "News Total")) +
+  geom_line(aes(y = nyt_total, color = "NYT")) +
+  geom_line(aes(y = ap_total, color = "AP")) +
+  labs(x = "Date",
+       y = "Monthly Count",
+       color = "Legend") +
+  scale_color_manual(values = colors)
 
-p + geom_line(aes(y = news_residual)) +
-  geom_line(aes(y = tweet_residual / 1000, color = "Blue"))
+p + geom_line(aes(y = news_residual, color = "News Total")) +
+  geom_line(aes(y = nyt_residual, color = "NYT")) +
+  geom_line(aes(y = ap_residual, color = "AP")) +
+  geom_line(aes(y = tweet_residual / 1000, color = "Tweet / 1000")) +
+  labs(x = "Date",
+       y = "Residual",
+       color = "Legend") +
+  scale_color_manual(values = colors)
 
 cor.test(lag(df$ap_residual, 0), lag(df$tweet_residual, 0), use = "complete.obs")
 cor.test(lag(df$nyt_residual, 0), lag(df$tweet_residual, 0), use = "complete.obs")
