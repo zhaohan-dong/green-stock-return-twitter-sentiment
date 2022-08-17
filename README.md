@@ -6,16 +6,13 @@ It is divided into two parts:
 1. Data collection (/twitter_scraping directory)
 2. Data analyzation (/processing directory)
 
-Gitignore list:
-data/equity/
-data/1_Tweet_IDs.csv
-data/tweet.csv
-data/tweet.old
-data/tweet_sentiment.csv
-data/twitter_raw/
+Twitter data available at Harvard Dataverse: https://doi.org/10.7910/DVN/LNNPVD
+Download twitter data into path: "data/1_Tweet_IDs.csv"
 
-Monthly WTI Crude Spot
+Monthly WTI Crude Spot:
 https://www.eia.gov/opendata/v1/qb.php?sdid=PET.RWTC.M
 
 Monthly Temperature:
 https://www.ncdc.noaa.gov/cdo-web/datasets
+
+Note: Equity data requires Bloomberg BQL access
