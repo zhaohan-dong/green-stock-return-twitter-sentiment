@@ -16,4 +16,9 @@ https://www.eia.gov/opendata/v1/qb.php?sdid=PET.RWTC.M
 Monthly Temperature:
 https://www.ncdc.noaa.gov/cdo-web/datasets
 
-Note: Equity data requires Bloomberg BQL access
+Note: Equity data in the following Excel files requires Bloomberg BQL:
+all_etf_nav.xlsx
+clean_selected.xlsx
+green_etf_flow.xlsx
+oil_gas_coal_selected.xlsx
+utilities_selected.xlsx
