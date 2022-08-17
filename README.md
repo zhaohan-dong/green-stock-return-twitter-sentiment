@@ -9,7 +9,6 @@ It is divided into two parts:
 Twitter data available at Harvard Dataverse: https://doi.org/10.7910/DVN/LNNPVD
 
 Download twitter data into path: "data/1_Tweet_IDs.csv"
-
 Twitter sentiment through VADER at "data/tweet_sentiment.csv" omitted in git due to size
 
 Monthly WTI Crude Spot:
