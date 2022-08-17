@@ -7,7 +7,8 @@ require("tidyverse", quietly = TRUE)
 require("vader", quietly = TRUE)
 require("lubridate", quietly = TRUE)
 
-# Load the dataset
+# Load the dataset, tweet.csv created by
+# merging all tweets csv from scrape_rtweet.Rmd using bind_tweet.R
 tweet_df <- read_twitter_csv("data/tweet.csv")
 
 # View(head(tweet_df))

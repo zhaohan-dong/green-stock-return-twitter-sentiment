@@ -5,27 +5,28 @@ require(readxl, quietly = TRUE)
 require(lubridate, quietly = TRUE)
 
 # Load news data
-nyt_climate_change <- read_excel("data/nyt_climate_change_2008_2018.xlsx") %>%
+nyt_climate_change <- read_xlsx("data/nyt_climate_change_2008_2018.xlsx") %>%
   rename_all(tolower) %>%
   rename(date = `published date`) %>%
   mutate(date = as.Date(date, format = "%B %e, %Y %A")) %>%
   mutate(date = floor_date(date, unit = "month"))
-nyt_global_warming <- read_excel("data/nyt_global_warming_2008_2018.xlsx") %>%
+nyt_global_warming <- read_xlsx("data/nyt_global_warming_2008_2018.xlsx") %>%
   rename_all(tolower) %>%
   rename(date = `published date`) %>%
   mutate(date = as.Date(date, format = "%B %e, %Y %A")) %>%
   mutate(date = floor_date(date, unit = "month"))
-ap_climate_change <- read_excel("data/ap_climate_change_2008_2018.xlsx") %>%
+ap_climate_change <- read_xlsx("data/ap_climate_change_2008_2018.xlsx") %>%
   rename_all(tolower) %>%
   rename(date = `published date`) %>%
   mutate(date = as.Date(date, format = "%B %e, %Y %A")) %>%
   mutate(date = floor_date(date, unit = "month"))
-ap_global_warming <- read_excel("data/ap_global_Warming_2008_2018.xlsx") %>%
+ap_global_warming <- read_xlsx("data/ap_global_Warming_2008_2018.xlsx") %>%
   rename_all(tolower) %>%
   rename(date = `published date`) %>%
   mutate(date = as.Date(date, format = "%B %e, %Y %A")) %>%
   mutate(date = floor_date(date, unit = "month"))
 
+# Bind different climate change term counts
 nyt_climate_change <- nyt_climate_change %>%
   merge(count(nyt_climate_change, date, name = "nyt_climate_change_count")) %>%
   select(date, nyt_climate_change_count) %>%
@@ -98,13 +99,12 @@ p + geom_line(aes(y = news_residual, color = "News Total")) +
        color = "Legend") +
   scale_color_manual(values = colors)
 
+# Test correlations
+# Original correlation
 cor.test(lag(df$ap_residual, 0), lag(df$tweet_residual, 0), use = "complete.obs")
 cor.test(lag(df$nyt_residual, 0), lag(df$tweet_residual, 0), use = "complete.obs")
 cor.test(lag(df$news_residual, 0), lag(df$tweet_residual, 0), use = "complete.obs")
+# AR(1) residual correlation
 cor.test(df$ap_total, lag(df$monthly_tweet_count, 0), use = "complete.obs")
 cor.test(df$nyt_total, lag(df$monthly_tweet_count, 0), use = "complete.obs")
 cor.test(df$news_total, lag(df$monthly_tweet_count, 0), use = "complete.obs")
-
-model <- lm(tweet_residual ~ nyt_residual, df)
-summary(model)
-durbinWatsonTest(model)

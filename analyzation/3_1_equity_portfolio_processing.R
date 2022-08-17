@@ -36,7 +36,7 @@ get_price <- function(df) {
   return(result_df)
 }
 
-# NOTE: NOT IMPLEMENTED
+# NOTE: NOT IMPLEMENTED, not measuring volume in final paper
 # Create dataframes for value weighted portfolio from cleansed csv
 # value_weight_portfolio <- function(df) {
 #   # Select and tidy data
@@ -91,15 +91,16 @@ get_price <- function(df) {
 ############################################################################
 ## Beginning of task
 # Read stock data
-clean_stock <- read_csv("data/equity/clean_selected.csv") %>%
+# Note: Contains BQL and needs Bloomberg
+clean_stock <- read_xlsx("data/equity/clean_selected.xlsx") %>%
   cleanse_stock_data() %>%
   filter(data_field == "PX_LAST")
 
-oil_gas_stock <- read_csv("data/equity/oil_gas_coal_selected.csv") %>%
+oil_gas_stock <- read_xlsx("data/equity/oil_gas_coal_selected.xlsx") %>%
   cleanse_stock_data() %>%
   filter(data_field == "PX_LAST")
 
-utilities_stock <- read_csv("data/equity/utilities_selected.csv") %>%
+utilities_stock <- read_xlsx("data/equity/utilities_selected.xlsx") %>%
   cleanse_stock_data() %>%
   filter(data_field == "PX_LAST")
 
@@ -301,7 +302,7 @@ twitter_summary <- read_twitter_csv("data/twitter_summary.csv") %>%
          tweet_count_change_perc =
            monthly_tweet_count / lag(monthly_tweet_count) - 1)
 
-# Twitter mau
+# Twitter mau might affect result, not used in final paper
 twitter_mau <- read_csv("data/twitter_mau.csv") %>%
   mutate(date = as.Date(date, "%m/%d/%Y"))
 months <- lapply(X = twitter_mau$date, FUN = seq.Date, by = "month", length.out = 3)

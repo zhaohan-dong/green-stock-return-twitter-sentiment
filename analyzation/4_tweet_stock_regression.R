@@ -7,7 +7,7 @@ require(ggfortify, quietly = TRUE)
 require(car, quietly = TRUE)
 require(DescTools, quietly = TRUE)
 
-# Import and merge data
+# Import and merge stock data and green etf data
 analysis_df <- read_csv("data/combined_monthly_data.csv") %>%
   mutate(oil_gas_return = oil_gas_return * 100) %>%
   mutate(clean_return = clean_return * 100) %>%
@@ -17,55 +17,50 @@ analysis_df <- read_csv("data/combined_monthly_data.csv") %>%
 green_factor <- read_csv("data/green_etf_factor.csv")
 analysis_df <- merge(analysis_df, green_factor)
 
-model <- arima(analysis_df$monthly_tweet_count, order = c(1, 0, 0))
-analysis_df <- analysis_df %>% mutate(ar1_res = c(model$residuals))
-
-# Plot playground
-p <- ggplot(analysis_df)
-p + 
-  #geom_line(aes(y = lag((clean_return - RF) * 10, n = 0), x = date), color="red") +
-  # geom_line(aes(y = lag(log10(total_flow), 0), x = date), color="blue") +
-  geom_line(aes(y = lag(wti_spot_price, n = 0), x = date), color="blue") +
-  geom_line(aes(y = lag(monthly_tweet_count / 10000, n = 1), x = date), color="orange")
-
 # Create multiple linear regression model for return
-clean_return_model <- lm(clean_return - RF ~  lag(monthly_tweet_count, n = 2) +
-                           Mkt_RF + SMB + HML,
+# Change regression terms to test hypothesis
+
+clean_return_model <- lm(clean_return - RF ~
+                           lag(monthly_tweet_count, n = 0) +
+                           Mkt_RF + SMB + HML + log(wti_oil_price),
                          data = analysis_df)
+# Test linear regression assumptions
 summary(clean_return_model)
 durbinWatsonTest(clean_return_model)
 vif(clean_return_model)
 autoplot(clean_return_model)
-cor(resid(clean_return_model), analysis_df$monthly_tweet_count)
 
 oil_gas_return_model <- lm(oil_gas_return - RF ~ 
-                             lag(monthly_tweet_count, n = 2) + Mkt_RF + SMB + HML,
+                             lag(monthly_tweet_count, n = 0) +
+                             Mkt_RF + SMB + HML + log(wti_oil_price),
                            data = analysis_df)
+# Test linear regression assumptions
 summary(oil_gas_return_model)
-oil_gas_return_model$residuals
 durbinWatsonTest(oil_gas_return_model)
 vif(oil_gas_return_model)
 autoplot(oil_gas_return_model)
 
-hist(analysis_df$sentiment_mean)
-
 utilities_return_model <- lm(utilities_return - RF ~
-                               lag(monthly_tweet_count, n = 2) + Mkt_RF + SMB + HML,
+                               lag(monthly_tweet_count, n = 0) +
+                               Mkt_RF + SMB + HML + log(wti_oil_price),
                            data = analysis_df)
+# Test linear regression assumptions
 summary(utilities_return_model)
-vif(utilities_return_model)
 durbinWatsonTest(utilities_return_model)
+vif(utilities_return_model)
 autoplot(utilities_return_model)
 
 gmb_return_model <- lm(gmb_return - RF ~
-                         lag(monthly_tweet_count, n = 2) + Mkt_RF + SMB + HML + log(wti_oil_price),
+                         lag(monthly_tweet_count, n = 0) +
+                         Mkt_RF + SMB + HML + log(wti_oil_price),
                        data = analysis_df)
+# Test linear regression assumptions
 summary(gmb_return_model)
 durbinWatsonTest(gmb_return_model)
 vif(gmb_return_model)
 autoplot(gmb_return_model)
 
-# # Create multiple linear regression model for volume
+# # Create multiple linear regression model for volume, not implemented
 # clean_ar <- arima(log(analysis_df$clean_volume), order = c(1, 0, 0))
 # res <- as_tibble(clean_ar$residuals)
 # analysis_df < analysis_df %>% cbind(res, factors.exclude = FALSE)
@@ -100,10 +95,6 @@ autoplot(gmb_return_model)
 # vif(gmb_volume_model)
 # coeftest(gmb_volume_model, vcov=NeweyWest(gmb_volume_model))
 # autoplot(gmb_volume_model)
-
-cor.test(log(analysis_df$wti_spot_price), lag(analysis_df$monthly_tweet_count, 0), use = "complete.obs")
-
-cor.test(analysis_df$green_etf, lag(analysis_df$monthly_tweet_count, 0), use = "complete.obs")
 
 # Plotting
 p <- ggplot(analysis_df)

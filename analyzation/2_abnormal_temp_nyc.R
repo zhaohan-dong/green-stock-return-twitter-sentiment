@@ -1,5 +1,6 @@
 ## Calculate the Abnormal Temperature in NYC
 # Using method defined by Darwin Choi et al. (2020)
+# Note: Not used in paper, tested the hypothesis of temperature influencing stock
 
 require("tidyverse", quietly = TRUE)
 require("zoo", quietly = TRUE)

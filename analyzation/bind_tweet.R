@@ -12,4 +12,4 @@ while(i < 12150002) {
   i <- i + 90000
 }
 
-save_as_csv(tweet_df, "data/tweet_new.csv")
+save_as_csv(tweet_df, "data/tweet.csv")

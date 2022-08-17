@@ -1,4 +1,5 @@
-## test on etf
+## Create green ETF index according to Briere and Ramelli(2021)
+# http://dx.doi.org/10.2139/ssrn.3850923
 
 # Load libraries
 require(tidyverse, quietly = TRUE)
@@ -7,7 +8,7 @@ require(broom, quietly = TRUE)
 require(rtweet, quietly = TRUE)
 require(readxl, quietly = TRUE)
 
-# All etf data
+# All ETF data from Wharton WRDS
 etf_df <- read_xlsx("data/equity/all_etf.xlsx") %>%
   rename(date = `Data Date - Security Monthly`,
          ticker = `Ticker Symbol`,
@@ -24,7 +25,8 @@ etf_df <- read_xlsx("data/equity/all_etf.xlsx") %>%
   mutate(flows = shares_out / lag(shares_out) - 1,
          flows = gsub("Inf", NA, flows))
 
-etf_nav_df <- read_csv("data/equity/all_etf_nav.csv") %>%
+# ETF NAV data from Bloomberg BQL
+etf_nav_df <- read_xlsx("data/equity/all_etf_nav.xlsx") %>%
   pivot_longer(cols = !c(ticker, data_field),
                names_to ="date",
                values_to = "value") %>%
@@ -38,7 +40,7 @@ etf_df <- etf_df %>%
   mutate(nav = nav / shares_out)
 
 # Green etf data
-green_etf_df <- read_csv("data/equity/green_etf_flow.csv") %>%
+green_etf_df <- read_xlsx("data/equity/green_etf_flow.xlsx") %>%
   pivot_longer(cols = !c(ticker, data_field),
                names_to ="date",
                values_to = "value",
@@ -57,6 +59,7 @@ green_etf_df <- read_csv("data/equity/green_etf_flow.csv") %>%
          return = price / lag(price) - 1) %>%
   select(-fund_flow)
 
+# Bind ETF data and green ETF data
 etf_df <- etf_df %>% 
   filter(!ticker %in% unique(green_etf_df$ticker)) %>%
   mutate(green_etf = 0) %>%
@@ -67,6 +70,7 @@ rm(etf_nav_df, green_etf_df)
 # Perform cross sectional regression
 result_df <- data.frame()
 
+# Finally, Calculate green ETF factor according to Briere and Ramelli(2021)
 for (d in unique(etf_df$date)) {
   monthly_df <- etf_df %>% filter(date == d)
   monthly_model <- lm(flows ~ log(nav) + green_etf + return, data = monthly_df, na.action = na.omit)
@@ -80,6 +84,7 @@ result_df <- result_df %>%
   arrange(date) %>%
   select(date, green_etf)
 
+# Save to CSV
 write_csv(result_df, "data/green_etf_factor.csv")
 
 rm(list = ls())
