@@ -1,0 +1,38 @@
+---
+title: "Cleansing Twitter Data"
+author: "Zhaohan Dong"
+date: '2022-04-08'
+output: html_document
+---
+
+``` {r}
+suppressMessages(library("tidyverse"))
+suppressMessages(library("rtweet"))
+```
+
+Load previously saved data from csv
+
+```{r}
+tweets <- read.csv("animal_welfare.csv", stringsAsFactors = FALSE)
+```
+
+Cleanse the data
+
+``` {r}
+tweets_clean <- tweets %>%
+  distinct() %>%
+  filter(lang == "en" & is_retweet == "FALSE") %>%
+  select("text")
+
+tweets_clean <- cbind(id = 1:nrow(tweets_clean), tweets_clean)
+
+#save_as_csv(tweets_clean, "animal_welfare_cleansed.csv")
+```
+
+Run the random selection
+
+``` {r}
+#selected_tweets <- slice_sample(tweets_clean, n = 100)
+
+#save_as_csv(selected_tweets, "selected.csv")
+```

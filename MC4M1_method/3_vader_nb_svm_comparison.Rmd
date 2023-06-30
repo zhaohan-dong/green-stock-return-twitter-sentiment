@@ -1,0 +1,264 @@
+---
+title: "Comparison Between VADER, Näive Bayes and Linear SVM in Classifying Twitter Sentiment"
+author: "Zhaohan Dong"
+date: '2022-04-13'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Comparison Between VADER, Näive Bayes and Linear SVM in Classifying Twitter Sentiment
+
+In this document, we will look at the different candidate algorithms, namely VADER, Naïve Bayes and Linear SVM in classifying movie review sentiment. The result will be the comparison of precision, recall and accuracy scores.
+
+------------------------------------------------------------------------
+
+## Preparation
+
+### Loading Packages
+
+Load all the relevant packages and data to be analyzed:
+
+```{r warning=FALSE}
+# Load packages
+require(vader, warn.conflicts = FALSE, quietly = TRUE)
+require(quanteda, warn.conflicts = FALSE, quietly = TRUE)
+quanteda_options(threads = 4)
+require(quanteda.textmodels, warn.conflicts = FALSE, quietly = TRUE)
+require(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+require(caret, warn.conflicts = FALSE, quietly = TRUE)
+require(rstatix, warn.conflicts = FALSE, quietly = TRUE)
+```
+
+### Defining Categorization Criteria
+
+Here we will define a function to help categorizing the sentiments. VADER and the tweets included in the package uses the following criteria in categorizing the sentiments:
+
+1.  [-1, -0.05) as negative
+2.  [-0.05, 0.05] as neutral
+3.  (0.05, 1] as positive
+
+```{r warning=FALSE}
+categorize <- function(vec, category = 3) {
+  if (category == 3) {
+    ifelse(vec > 0.05, 1,
+           ifelse(vec < -0.05, -1, 0))
+  } else if (category == 5) {
+    ifelse(vec > 0.45, 2,
+            ifelse(vec > 0.05 & vec <= 0.45, 1,
+                   ifelse(vec <=0.05 & vec >= -0.05, 0,
+                          ifelse(vec < -0.05 & vec >= -0.45, -1, -2))))
+  }
+}
+```
+
+### Data Cleansing
+
+The supplied tweets ground truth is in tab separated values and the sentiment values have range [-4, 4]. Here, we will import the data, normalize the sentiment values to [-1, 1] and create k = 5 fold cross validation sets (80%/20% for train/test data).
+
+```{r warning=FALSE}
+# Set seed for randomization
+set.seed(1234)
+
+# Load tweets ground truth from VADER by Hutto & Gilbert (2014)
+## Read with read_tsv because read.table or read.delim does not return all rows
+tweets_ground_truth <- read_tsv("tweets_GroundTruth.txt", col_names = c("id", "sentiment", "text"), col_types = "idc")
+
+# Normalize sentiment score into [-1, 1] from [-4, 4] and binning according to the VADER criteria
+tweets_ground_truth$sentiment <- categorize(tweets_ground_truth$sentiment / 4)
+
+# Create k = 5 folds for cross-validation
+flds <- createFolds(tweets_ground_truth$sentiment, k = 5, list = TRUE) 
+```
+
+### Creating DFMs for ML Methods using Quanteda
+
+The machine learning methods dfm will be trimmed low frequency features. The scores will then be categorized using VADER's criteria.
+
+```{r warning=FALSE}
+# Convert tweet ground truth to corpus
+tweet_corpus <- corpus(tweets_ground_truth, docid_field = "id", text_field = "text")
+
+# Create dfm
+tweetDfm <- dfm(tokens(tweet_corpus))
+
+# Trim dfm for ML methods
+ftrim = 7 # set term trim min freq
+tweetDfm <- dfm_trim(tweetDfm, min_termfreq = ftrim)
+tweetDfm <- dfm_remove(tweetDfm, stopwords("english"))
+tweetDfm
+```
+
+### Define Train and Predict Functions
+
+We will define below the function to train model and predict. The aggregated function will output a confusion matrix. We can then nest the functions within loops to create cross-validated results.
+
+Note: `vader_df()` takes a single vector/column of text and returns a dataframe with compound score between -1 and 1
+
+```{r warning=FALSE}
+# Define model and predict functions to output confusion matrix for each fold
+## VADER
+tweet_vader_cm <- function(df, train_row, test_row) {
+  tweet_vader_pred <- vader_df(df$text[test_row], neu_set=T)$compound
+  # Binning the vader result into three groups
+  tweet_vader_pred <- categorize(tweet_vader_pred)
+  table(actual = factor(
+    categorize(df$sentiment[test_row]),
+                        levels = -1:1),
+    predicted = tweet_vader_pred)
+}
+
+## Naïve Bayes
+tweet_nb_cm <- function(dfm, train_row, test_row) {
+  tweet_nb_model <- textmodel_nb(dfm[train_row,],
+                                 docvars(dfm, field = "sentiment")[train_row])
+  tweet_nb_pred <- predict(tweet_nb_model, newdata = dfm[test_row,])
+  table(actual = factor(
+    docvars(dfm, "sentiment")[test_row], levels = -1:1),
+    predicted = tweet_nb_pred) # converted actual to factors to give a square table
+}
+
+## SVM
+tweet_svm_cm <- function(dfm, train_row, test_row) {
+  tweet_svm_model <- textmodel_svm(dfm[train_row,],
+                                 docvars(dfm, field = "sentiment")[train_row])
+  tweet_svm_pred <- predict(tweet_svm_model, newdata = dfm[test_row,])
+  table(actual = factor(
+    docvars(dfm, "sentiment")[test_row], levels = -1:1),
+    predicted = tweet_svm_pred) # converted actual to factors to give a square table
+}
+```
+
+### Defining Performance Metrics Function
+
+Note: Input table to `perf_metrics` must be formatted as `table(actual, predicted)` and the table must be square
+
+```{r warning=FALSE}
+perf_metrics <- function(cm, verbose = TRUE) {
+  # Preparation
+  n <- sum(cm)
+  nc <- nrow(cm)
+  diag <- diag(cm)
+  rowsums <- apply(cm, 1, sum)
+  colsums <- apply(cm, 2, sum)
+  
+  # Calculate the metrics
+  accuracy <- sum(diag) / n
+  bal_accuracy <- sum(diag / rowsums) / nc
+  precision <- diag / colsums
+  recall <- diag / rowsums
+  
+  # Calculate macro F1
+  macro_avg_precision <- sum(precision) / nc
+  macro_avg_recall <- sum(recall) / nc
+  macro_f1 <- 2 * macro_avg_precision * macro_avg_recall / (macro_avg_precision + macro_avg_recall)
+  
+  output <- data.frame(precision, recall, macro_f1, accuracy, bal_accuracy) %>%
+    rownames_to_column("class")
+  if (verbose) {
+    print(cm)
+    print(output)
+  }
+  invisible(output)
+}
+```
+
+------------------------------------------------------------------------
+
+## Implementation
+
+### Implementing all methods
+
+```{r}
+# Loop through k-folds and output a dataframe with performance metrics for each fold
+
+## VADER
+df_vader <- data.frame()
+for (fld in flds) {
+  df_fld <- perf_metrics(
+    tweet_vader_cm(
+      tweets_ground_truth,
+      (1:nrow(tweets_ground_truth))[!1:nrow(tweets_ground_truth) %in% fld],
+      fld),
+    verbose = F
+    ) %>%
+    pivot_longer(cols = -"class") # Pivot longer except class so we can group
+  df_vader <- rbind(df_vader, df_fld) # Bind all df_fld
+}
+df_fld <- NULL # Clear temporary df
+df_vader$method <- "vader"
+
+## Naïve Bayes
+df_nb <- data.frame()
+for (fld in flds) {
+  df_fld <- perf_metrics(
+    tweet_nb_cm(
+      tweetDfm,
+      (1:nrow(tweetDfm))[!1:nrow(tweetDfm) %in% fld],
+      fld),
+    verbose = F
+    ) %>%
+    pivot_longer(cols = -"class") # Pivot longer except class so we can group
+  df_nb <- rbind(df_nb, df_fld) # Bind all df_fld
+}
+df_fld <- NULL # Clear temporary df
+df_nb$method <- "nb"
+
+## SVM
+df_svm <- data.frame()
+for (fld in flds) {
+  df_fld <- perf_metrics(
+    tweet_svm_cm(
+      tweetDfm,
+      (1:nrow(tweetDfm))[!1:nrow(tweetDfm) %in% fld],
+      fld),
+    verbose = F
+    ) %>%
+    pivot_longer(cols = -"class")
+  df_svm <- rbind(df_svm, df_fld) # Bind all df_fld
+}
+df_fld <- NULL # Clear temporary df
+df_svm$method <- "svm"
+
+rm(fld, df_fld)
+```
+
+### Performing t-test on the result
+
+``` {r message=FALSE}
+df_vader_nb <- rbind(df_vader, df_nb)
+df_vader_nb %>%
+  group_by(class, name) %>%
+  pairwise_t_test(value ~ method, paired = TRUE, var.equal = FALSE)
+
+df_vader_svm <- rbind(df_vader, df_svm)
+df_vader_svm %>%
+  group_by(class, name) %>%
+  pairwise_t_test(value ~ method, paired = TRUE, var.equal = FALSE)
+
+df_vader %>%
+  group_by(class, name) %>%
+  summarize(mean = mean(value), sd = sd(value))
+
+df_vader %>%
+  group_by(class, name) %>%
+  t_test(value ~ 1, detailed = TRUE)
+
+df_nb %>%
+  group_by(class, name) %>%
+  summarize(mean = mean(value), sd = sd(value))
+
+df_nb %>%
+  group_by(class, name) %>%
+  t_test(value ~ 1, detailed = TRUE)
+
+df_svm %>%
+  group_by(class, name) %>%
+  summarize(mean = mean(value), sd = sd(value))
+
+df_svm %>%
+  group_by(class, name) %>%
+  t_test(value ~ 1, detailed = TRUE)
+```

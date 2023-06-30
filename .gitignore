@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+authentication.rds
 data/tweet.csv
 data/tweet_sentiment.csv
 

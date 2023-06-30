@@ -1,0 +1,45 @@
+---
+title: "Download Twitter Data"
+author: "Zhaohan Dong"
+date: '2022-04-04'
+output: html_document
+---
+
+load packages:
+
+```{r echo=FALSE}
+suppressMessages(library("rtweet"))
+```
+# Authenticate
+
+Authenticating the API
+
+```{r}
+# read data file
+authentication <- readRDS("authentication.rds")
+
+# create token
+twitter_token <- create_token(app = "mc4m1", 
+                              consumer_key = authentication$consumer_key,
+                              consumer_secret = authentication$consumer_secret,
+                              access_token = authentication$access_token,
+                              access_secret = authentication$access_token_secret)
+
+# convert token to bearer token (since no posting would be done)
+twitter_token <- bearer_token(twitter_token)
+```
+
+## Pull data
+
+create twitter search
+```{r}
+tweets <- search_tweets("(animal AND welfare) OR (animal AND rights)",
+                        n = 2500000, retryonratelimit = TRUE)
+
+```
+
+Save those data to csv
+
+``` {r}
+save_as_csv(tweets, "animal_welfare.csv")
+```

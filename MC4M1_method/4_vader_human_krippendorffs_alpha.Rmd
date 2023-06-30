@@ -1,0 +1,73 @@
+---
+title: "VADER & Human Krippendorff's Alpha"
+author: "Zhaohan Dong"
+date: '2022-04-19'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import Packages
+
+```{r message = FALSE}
+require(tidyverse)
+require(vader)
+require(irr)
+```
+
+## Normalize Human Grader Score
+
+The csv containing human graders' responses are imported.
+
+```{r message = FALSE}
+gradeDf <- read_csv("twitter_sentiment_grade.csv", col_names = T, col_types = "d")
+
+# Pivot table to make the columns representing response from each grader and the text
+gradeDf <- gradeDf %>%
+  pivot_longer(cols = !"id", names_to = "text", values_to = "value") %>%
+  pivot_wider(names_from = "id")
+
+head(gradeDf)
+```
+
+## Calculate VADER Score and bind to the other grades
+
+```{r}
+vader_res <- vader_df(gradeDf[,1])
+gradeDf$vader <- vader_res$compound * 4
+```
+
+## Transform the shape of the dataframe to calculate Krippendorff's Alpha
+
+```{r}
+gradeDf <- gradeDf %>%
+  mutate(content_id = 1:nrow(gradeDf)) %>%
+  select(-text) %>%
+  pivot_longer(cols = c("1", "2", "vader"), names_to = "coder_id") %>%
+  pivot_wider(id_cols = coder_id, names_from = content_id, values_from = value)
+
+head(gradeDf)
+
+# Delete the coder_id
+gradeDf_all <- as.matrix(select(gradeDf, -coder_id))
+gradeDf_human <- as.matrix(select(gradeDf[1:2,], -coder_id))
+gradeDf_1_vader <- as.matrix(select(gradeDf[-2,], -coder_id))
+gradeDf_2_vader <- as.matrix(select(gradeDf[-1,], -coder_id))
+
+# Calculate Krippendorff's Alpha
+kripp.alpha(gradeDf_all, method = "interval")
+kripp.alpha(gradeDf_human, method = "interval")
+kripp.alpha(gradeDf_1_vader, method = "interval")
+kripp.alpha(gradeDf_2_vader, method = "interval")
+```
+
+## Krippendorff's Alpha with ground truth
+
+```{r}
+tweets_ground_truth <- read_tsv("tweets_GroundTruth.txt", col_names = c("id", "sentiment", "text"), col_types = "idc")
+gradeDf_vader_gt <- vader_df(tweets_ground_truth$text)$compound * 4
+gradeDf_vader_gt <- rbind(gradeDf_vader_gt, tweets_ground_truth$sentiment)
+kripp.alpha(gradeDf_vader_gt, method = "interval")
+```
